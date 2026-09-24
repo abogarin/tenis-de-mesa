@@ -90,6 +90,15 @@ tbody tr.row{cursor:pointer}
 tbody tr.row:hover td{background:var(--surface-2)}
 .pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
 .pos.top1{color:var(--red)}
+.nextup{color:var(--ball)}
+.pdfbtn{border-color:var(--ball);color:var(--ball)}
+.pdfbtn:disabled{opacity:.6;cursor:wait}
+.kfilters{grid-template-columns:minmax(110px,160px) minmax(140px,220px) minmax(0,1fr)}
+@media(max-width:560px){.kfilters{grid-template-columns:1fr 1fr}.kfilters .search{grid-column:1/-1}}
+.kdetail>td{background:var(--surface-2);white-space:normal;padding:12px}
+.kd-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:8px}
+.kdetail .career td{background:var(--surface);cursor:pointer}
+.kdetail .career tr:hover td{background:var(--bg)}
 .name{font-weight:600;white-space:normal;min-width:180px}
 .club{color:var(--muted)}
 .mv{display:inline-block;min-width:44px;text-align:center;border-radius:6px;padding:1px 6px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -150,6 +159,17 @@ tbody tr.row:hover td{background:var(--surface-2)}
 footer.src{max-width:1180px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px}
 footer.src a{color:inherit}
 @media(min-width:700px){footer.src{padding-inline:32px}}
+/* Compare tab */
+.cbar{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,320px);gap:10px;margin-bottom:10px}
+.cslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media(max-width:700px){.cslots{grid-template-columns:1fr}.cbar{grid-template-columns:1fr 2fr}}
+.cslots .f label::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--slot)}
+.cslots .f:nth-child(1){--slot:var(--s1)}.cslots .f:nth-child(2){--slot:var(--s2)}.cslots .f:nth-child(3){--slot:var(--s3)}
+.cclear{position:absolute;right:8px;top:27px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px}
+.ctable td b{font-variant-numeric:tabular-nums}
+.ptable.ctable table{min-width:0}
+@media(max-width:560px){.ptable.ctable th,.ptable.ctable td{padding:7px 6px;font-size:13px;white-space:normal;letter-spacing:.02em}}
+.ctable .win{color:var(--up);font-weight:700}
 /* Player tab */
 :root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}}
@@ -205,7 +225,9 @@ footer.src a{color:inherit}
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
     <button class="tab" role="tab" id="tab-player" aria-selected="false" data-tab="player">Jugador</button>
-    <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages">Historial de etapas</button>
+    <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Comparar</button>
+    <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs">Clubes</button>
+    <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages" hidden>Historial de etapas</button>
   </div>
 
   <section id="view-rank">
@@ -215,12 +237,12 @@ footer.src a{color:inherit}
       <div class="f"><label for="fcircuit">Circuito</label><select id="fcircuit"></select></div>
       <div class="f"><label for="fdiv">Categoría</label><select id="fdiv"></select></div>
       <div class="f"><label for="fgender">Género</label><select id="fgender"></select></div>
-      <div class="f"><label for="fclub">Equipo / club</label><select id="fclub"></select></div>
+      <div class="f"><label for="fclub">Equipo / club</label><input id="fclub" list="clubList" type="search" autocomplete="off" placeholder="Todos · escriba el club"><datalist id="clubList"></datalist></div>
     </div>
     <div class="stagebar" id="stagebar"></div>
     <div class="tblwrap">
       <table>
-        <thead><tr>
+        <thead><tr id="rankHead">
           <th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num" title="Puntos ganados desde la etapa anterior. En la primera etapa del año, o la primera vez que aparece el jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090.">+Pts</th><th class="num">Carné</th>
         </tr></thead>
         <tbody id="tbody"><tr><td colspan="7" class="empty">Cargando ranking…</td></tr></tbody>
@@ -239,6 +261,30 @@ footer.src a{color:inherit}
       <div class="f"><label for="pseason">Temporada</label><select id="pseason"></select></div>
     </div>
     <div id="pbody"><div class="pempty">Busque un jugador para ver su evolución en todos los rankings donde compite.</div></div>
+  </section>
+
+  <section id="view-compare" hidden>
+    <div class="cbar">
+      <div class="f"><label for="cseason">Temporada</label><select id="cseason"></select></div>
+      <div class="f"><label for="ccat">Ranking</label><select id="ccat"></select></div>
+    </div>
+    <div class="cslots">
+      <div class="f psearch"><label for="cq0">Jugador 1</label><input id="cq0" data-slot="0" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg0" hidden></div></div>
+      <div class="f psearch"><label for="cq1">Jugador 2</label><input id="cq1" data-slot="1" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg1" hidden></div></div>
+      <div class="f psearch"><label for="cq2">Jugador 3 (opcional)</label><input id="cq2" data-slot="2" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg2" hidden></div></div>
+    </div>
+    <div id="cbody"></div>
+  </section>
+
+  <section id="view-clubs" hidden>
+    <div class="filters kfilters">
+      <div class="f"><label for="kseason">Temporada</label><select id="kseason"></select></div>
+      <div class="f"><label for="kcircuit">Circuito</label><select id="kcircuit"></select></div>
+      <div class="f search"><label for="kq">Club</label><input id="kq" type="search" autocomplete="off" placeholder="Buscar club"></div>
+    </div>
+    <div class="stagebar"><span class="summary" id="ksummary" style="margin-left:0"></span><button class="chip pdfbtn" data-pdf="clubs">Descargar PDF</button></div>
+    <div class="tblwrap"><table><thead><tr><th class="num">#</th><th>Club</th><th class="num">Jugadores</th><th class="num" title="Posiciones 1 a 3 en la última etapa de cada ranking">Top 3</th><th class="num" title="Posiciones 1 a 10 en la última etapa de cada ranking">Top 10</th><th>Mejor resultado</th></tr></thead><tbody id="kbody"></tbody></table></div>
+    <p class="note">Cuenta los jugadores con resultados en la última etapa publicada de cada ranking (sin los que están en el puntaje base). Un jugador en varios rankings suma en cada uno para Top 3 y Top 10. Toque un club para ver sus jugadores.</p>
   </section>
 
   <section id="view-stages" hidden>
@@ -332,7 +378,8 @@ function buildFilters(){
   F.div=fillSelect($('#fdiv'),[...new Set(inCirc.map(d=>d.division))].sort((a,b)=>divRank(a)-divRank(b)),F.div,'Todas');
   F.gender=fillSelect($('#fgender'),[...new Set(inCirc.map(d=>d.gender))].sort(),F.gender,'Todos',v=>GENDER[v]||v);
   const clubs=new Set();inSeason.forEach(d=>d.rows.forEach(r=>clubs.add(clubName(r[3]))));
-  F.club=fillSelect($('#fclub'),[...clubs].sort((a,b)=>a.localeCompare(b,'es')),F.club,'Todos');
+  $('#clubList').innerHTML=[...clubs].sort((a,b)=>a.localeCompare(b,'es')).map(c=>`<option value="${esc(c)}">`).join('');
+  $('#fclub').value=F.club||'';
 }
 function visibleGroups(){
   return [...groups.values()].filter(a=>{const d=a[0];return String(d.season)===String(F.season)&&(!F.circuit||F.circuit===d.circuit)&&(!F.div||F.div===d.division)&&(!F.gender||F.gender===d.gender)})
@@ -342,7 +389,7 @@ function renderStagebar(vg){
   const nums=[...new Set(vg.flatMap(a=>a.map(d=>d.stage)))].sort((a,b)=>a-b);
   if(F.stage!=='latest'&&!nums.includes(+F.stage))F.stage='latest';
   const chip=(v,l)=>`<button class="chip" data-stage="${v}" aria-pressed="${String(F.stage)===String(v)}">${l}</button>`;
-  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span><button class="chip" id="baseToggle" hidden title="Jugadores que comparten el puntaje inicial de la categoría (baja cada etapa): no tienen resultados registrados"><span></span></button>`;
+  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span><button class="chip pdfbtn" data-pdf="ranking">Descargar PDF</button><button class="chip" id="baseToggle" hidden title="Jugadores que comparten el puntaje inicial de la categoría (baja cada etapa): no tienen resultados registrados"><span></span></button>`;
 }
 function mvCell(d,r){
   if(r[5]==='asc')return '<span class="mv up" title="Pasa a esta división para la próxima etapa">▲ Asciende</span>';
@@ -381,30 +428,80 @@ function dPts(d,r){
   const x=Math.round((r[4]-pp.v)*100)/100;
   const t=pp.from==='start'?` title="Desde los ${pp.v} puntos iniciales"`:pp.from==='season'?` title="Desde el cierre de ${d.season-1} (${pp.v} pts; mínimo 1090)"`:' title="Desde la etapa anterior"';
   return x>0?`<span class="dpts"${t}>+${x}</span>`:x<0?`<span class="mv down"${t}>${x}</span>`:`<span class="club"${t}>0</span>`}
-function render(){
-  const vg=visibleGroups();
-  renderStagebar(vg);
-  const q=fold(F.q).trim();
-  let html='',count=0,shown=0,hiddenBase=0;
-  for(const arr of vg){
+const clubOk=r=>!F.club||fold(clubName(r[3])).includes(fold(F.club));
+// The rankings and rows the current filters select (shared by the table and the PDF)
+function rankingSelection(){
+  const q=fold(F.q).trim(),out=[];
+  for(const arr of visibleGroups()){
     const d=F.stage==='latest'?arr[arr.length-1]:arr.find(x=>x.stage===+F.stage);
     if(!d)continue;
     const hideBase=!F.showBase&&!q&&d._base!=null;
-    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&(!F.club||clubName(r[3])===F.club));
+    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&clubOk(r));
     const rows=hideBase?all.filter(r=>r[4]!==d._base):all;
+    out.push({d,all,rows,hideBase});
+  }
+  return out;
+}
+/* Extra column: promotion distance (Liga Mayor) and next year's category (Liga Menor) */
+let MAYOR_MIN={Primera:1900,Segunda:1700,Tercera:1500,Cuarta:1300,Quinta:1100,Sexta:0};
+const MENOR_ORDER=['U9','U11','U13','U15','U19'];
+let ageLow=new Map();   // season -> Map(carne|gender -> lowest Liga Menor category index listed)
+function buildAgeIndex(){
+  ageLow=new Map();
+  for(const d of docs){if(d.circuit!=='Liga Menor')continue;const i=MENOR_ORDER.indexOf(d.division);if(i<0)continue;
+    if(!ageLow.has(d.season))ageLow.set(d.season,new Map());const m=ageLow.get(d.season);
+    for(const r of d.rows){const k=r[1]+'|'+d.gender;if(!m.has(k)||i<m.get(k))m.set(k,i)}}
+}
+// Players are listed in their own age category and every older one, so the lowest list is their age category.
+// Categories are two-year bands: first year if last season they were in a younger category, second year if
+// they were already in this one (then they move up next year). U19 spans four years: not estimated.
+function nextCategory(season,carne,gender){
+  const cur=ageLow.get(season)?.get(carne+'|'+gender);if(cur==null)return null;
+  if(MENOR_ORDER[cur]==='U19')return {text:'—',title:'U19 abarca cuatro años: no se puede estimar'};
+  const prev=ageLow.get(season-1)?.get(carne+'|'+gender);
+  if(prev==null)return {text:'—',title:`Sin registro en ${season-1}`};
+  if(prev<cur)return {text:MENOR_ORDER[cur],stay:true,title:`Primer año en ${MENOR_ORDER[cur]} (en ${season-1} estaba en ${MENOR_ORDER[prev]})`};
+  if(prev===cur)return {text:MENOR_ORDER[cur+1],up:true,title:`Estimado: ya estaba en ${MENOR_ORDER[cur]} en ${season-1}, segundo año`};
+  return {text:'—',title:'Sin datos suficientes'};
+}
+function extraMode(sel){
+  const m=sel.some(x=>x.d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(x.d.division)),n=sel.some(x=>x.d.circuit==='Liga Menor');
+  if(!m&&!n)return null;
+  const season=sel[0]?.d.season;
+  return {label:m&&n?'Próximo paso':m?'Ascenso':`Categoría ${season+1}`,
+    title:m&&n?'Liga Mayor: puntos que faltan para la siguiente división. Liga Menor: categoría estimada para el próximo año.':m?'Puntos que faltan para la siguiente división':'Categoría estimada para el próximo año, según su categoría de edad en '+(season-1)+' y '+season};
+}
+function extraInfo(d,r){
+  if(d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(d.division)){
+    const i=MAYOR_DIVS.indexOf(d.division);if(i<=0||d.division==='Sin división')return null;
+    if(r[4]<(MAYOR_MIN[d.division]??0))return {text:'Juega una arriba',title:`Sus puntos corresponden a ${MAYOR_DIVS[i+1]||'otra división'}`};
+    const next=MAYOR_DIVS[i-1],need=Math.round((MAYOR_MIN[next]-r[4])*100)/100;
+    return need<=0?{text:`Alcanza ${next}`,up:true,title:`Tiene los puntos de ${next} (${MAYOR_MIN[next]}+)`}:{text:`Faltan ${need} para ${next}`,title:`${next}: desde ${MAYOR_MIN[next]} puntos`};
+  }
+  if(d.circuit==='Liga Menor')return nextCategory(d.season,r[1],d.gender);
+  return null;
+}
+const extraCell=(d,r)=>{const x=extraInfo(d,r);if(!x)return '<td></td>';return `<td title="${esc(x.title||'')}">${x.up?'<b class="nextup">'+esc(x.text)+'</b>':esc(x.text)}${x.up&&d.circuit==='Liga Menor'?' <small class="club">sube</small>':''}${x.stay?' <small class="club">sigue</small>':''}</td>`};
+function render(){
+  const vg=visibleGroups();
+  renderStagebar(vg);
+  const sel=rankingSelection(),ex=extraMode(sel),cols=ex?8:7;
+  $('#rankHead').innerHTML=`<th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num" title="Puntos ganados desde la etapa anterior. En la primera etapa del año, o la primera vez que aparece el jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090.">+Pts</th>${ex?`<th title="${esc(ex.title)}">${esc(ex.label)}</th>`:''}<th class="num">Carné</th>`;
+  let html='',count=0,shown=0,hiddenBase=0;
+  for(const {d,all,rows,hideBase} of sel){
     hiddenBase+=all.length-rows.length;
     if(!rows.length)continue;
     count+=rows.length;
     if(shown>=limit)continue;
     const cmp=(d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'')+(d.divisionBy==='points'?` · división asignada por puntos${d.playUpFrom?`; quien jugó una división arriba en la Etapa ${ROMAN[d.playUpFrom]||d.playUpFrom} se mantiene`:''} (el archivo no la indica)`:'');
-    html+=`<tr class="grp"><td colspan="7">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
+    html+=`<tr class="grp"><td colspan="${cols}">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
     for(const r of rows){
       if(shown>=limit)break;shown++;
-      html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td><td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
+      html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td>${ex?extraCell(d,r):''}<td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
     }
   }
-  if(!docs.length)html=`<tr><td colspan="7" class="empty">Aún no hay etapas cargadas.</td></tr>`;
-  else if(!count)html=`<tr><td colspan="7" class="empty">Ningún atleta coincide con estos filtros.</td></tr>`;
+  if(!docs.length)html=`<tr><td colspan="${cols}" class="empty">Aún no hay etapas cargadas.</td></tr>`;
+  else if(!count)html=`<tr><td colspan="${cols}" class="empty">Ningún atleta coincide con estos filtros.</td></tr>`;
   $('#tbody').innerHTML=html;
   $('#more').hidden=shown>=count;
   const s=$('#summary');if(s)s.textContent=count?`${count} atleta${count===1?'':'s'}`:'';
@@ -508,7 +605,8 @@ function chart(pts){
 
 /* Events */
 $('#fq').addEventListener('input',e=>{F.q=e.target.value;limit=250;render()});
-for(const [id,k] of [['#fseason','season'],['#fcircuit','circuit'],['#fdiv','div'],['#fgender','gender'],['#fclub','club']])
+$('#fclub').addEventListener('input',e=>{F.club=e.target.value.trim();limit=250;saveF();render()});
+for(const [id,k] of [['#fseason','season'],['#fcircuit','circuit'],['#fdiv','div'],['#fgender','gender']])
   $(id).addEventListener('change',e=>{F[k]=e.target.value;if(k==='season'||k==='circuit'){buildFilters()}limit=250;saveF();render()});
 $('#stagebar').addEventListener('click',e=>{
   if(e.target.closest('#baseToggle')){F.showBase=!F.showBase;limit=250;render();return}
@@ -593,7 +691,7 @@ function renderPlayer(){
     <div class="pctl"><span class="lbl">Mostrar</span>
       <button class="chip" data-metric="pos" aria-pressed="${P.metric==='pos'}">Posición</button>
       <button class="chip" data-metric="pct" aria-pressed="${P.metric==='pct'}">Percentil</button>
-      <span class="summary">${list.length} ranking${list.length===1?'':'s'} en ${P.season}</span></div>
+      <span class="summary">${list.length} ranking${list.length===1?'':'s'} en ${P.season}</span><button class="chip pdfbtn" data-pdf="player">Descargar PDF</button></div>
     ${list.length>1?`<div class="legend">${list.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''}
     <div class="pchart" id="pchart"></div>
     <p class="pct" style="margin:6px 0 0">${P.metric==='pos'?'Posición en cada ranking (escala logarítmica: más arriba = mejor).':'Percentil dentro de cada ranking, entre los jugadores con resultados (más arriba = mejor). Permite comparar rankings de distinto tamaño.'} Liga Mayor y Open Femenino se muestran como una sola línea aunque el jugador cambie de división.</p>
@@ -601,19 +699,20 @@ function renderPlayer(){
   </div>`;
   // table view
   h+=`<div class="tblwrap ptable"><table><thead><tr><th>Ranking</th>${stages.map(s=>`<th class="num">Etapa ${ROMAN[s]||s}</th>`).join('')}</tr></thead><tbody>`+
-    list.map(s=>`<tr><td><span style="display:inline-block;width:12px;height:2px;background:${s.color};vertical-align:middle;margin-right:8px"></span>${esc(s.name)}</td>`+
+    list.map(s=>`<tr><td><span style="display:inline-block;width:12px;height:2px;background:${s.color};vertical-align:middle;margin-right:8px"></span>${esc(s.name)} <button class="btn sm" data-compare="${esc(s.key)}" style="margin-left:6px">Comparar</button></td>`+
       stages.map(st=>{const p=s.pts.find(x=>x.stage===st);return `<td class="num">${p?`<b>${p.rank}</b> <small>/ ${p.n}</small><br><small>${p.points} pts${DIVIDED.has(s.circuit)?' · '+esc(p.division.replace(/^Open /,'')):''}</small>`:'<small>—</small>'}</td>`}).join('')+'</tr>').join('')+
     `</tbody></table></div>`;
   body.innerHTML=h;
   drawPlayerChart(list,stages);
 }
-function drawPlayerChart(list,stages){
-  const host=$('#pchart');if(!host)return;
+function drawPlayerChart(list,stages,opt={}){
+  const host=$(opt.host||'#pchart');if(!host)return;
+  const metric=opt.metric||P.metric,season=opt.season||P.season;
   const W=Math.max(300,host.clientWidth||600),H=W<520?260:320,L=52,R=W<520?16:110,T=16,B=34;
   const iw=W-L-R,ih=H-T-B;
   const x=st=>L+(stages.length===1?iw/2:(stages.indexOf(st))*iw/(stages.length-1));
-  const pos=P.metric==='pos';
-  const val=p=>pos?p.rank:p.pct;
+  const pos=metric==='pos',ptsM=metric==='pts';
+  const val=p=>pos?p.rank:ptsM?p.points:p.pct;
   const all=list.flatMap(s=>s.pts.map(val));
   let y,ticks,fmt;
   if(pos){
@@ -621,6 +720,11 @@ function drawPlayerChart(list,stages){
     const l0=Math.log(lo),l1=Math.log(hi);
     y=v=>T+(Math.log(v)-l0)/(l1-l0)*ih;
     ticks=[1,2,3,5,10,20,50,100,200,500,1000,2000,5000].filter(t=>t<=hi);fmt=t=>'#'+t;
+  }else if(ptsM){
+    // points: higher is better, drawn at the top; nice round ticks
+    let lo=Math.min(...all),hi=Math.max(...all);const span=Math.max(20,hi-lo),pad=span*.12;lo-=pad;hi+=pad;
+    const step=[10,20,25,50,100,200,250,500].find(st=>span/st<=5)||1000;
+    y=v=>T+(hi-v)/(hi-lo)*ih;ticks=[];for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step)ticks.push(t);fmt=t=>String(t);
   }else{
     y=v=>T+(v-1)/99*ih;ticks=[1,25,50,75,100];fmt=t=>'Top '+t+'%';
   }
@@ -645,7 +749,7 @@ function drawPlayerChart(list,stages){
   if(R>60&&list.length<=4){
     const labs=list.map(s=>{const p=s.pts[s.pts.length-1];return {s,p,y:y(val(p))}}).sort((a,b)=>a.y-b.y);
     for(let i=1;i<labs.length;i++)if(labs[i].y-labs[i-1].y<14)labs[i].y=labs[i-1].y+14;
-    for(const l of labs){const tx=el('text',{x:x(l.p.stage)+10,y:l.y+4,'font-size':12,'font-weight':600,fill:'var(--text)'});tx.textContent=l.s.name}
+    for(const l of labs){const tx=el('text',{x:x(l.p.stage)+10,y:l.y+4,'font-size':12,'font-weight':600,fill:'var(--text)'});tx.textContent=l.s.short||l.s.name}
   }
   const hit=el('rect',{x:L,y:T,width:iw,height:ih,fill:'transparent'});
   host.innerHTML='';host.append(svg);
@@ -653,13 +757,13 @@ function drawPlayerChart(list,stages){
   const nearest=cx=>stages.reduce((b,st)=>Math.abs(x(st)-cx)<Math.abs(x(b)-cx)?st:b,stages[0]);
   const show=st=>{
     cross.setAttribute('x1',x(st));cross.setAttribute('x2',x(st));cross.setAttribute('opacity',1);
-    tip.innerHTML='';const hd=document.createElement('div');hd.className='h';hd.textContent='Etapa '+(ROMAN[st]||st)+' · '+P.season;tip.append(hd);
+    tip.innerHTML='';const hd=document.createElement('div');hd.className='h';hd.textContent='Etapa '+(ROMAN[st]||st)+' · '+season;tip.append(hd);
     for(const s of list){
       const p=s.pts.find(q=>q.stage===st);
       const row=document.createElement('div');row.className='r';
       const i=document.createElement('i');i.style.background=s.color;
-      const b=document.createElement('b');b.textContent=p?(pos?`#${p.rank} / ${p.n}`:`Top ${p.pct}%`):'—';
-      const n=document.createElement('span');n.textContent=s.name+(p&&DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):'')+(p?` · ${p.points} pts`:'');
+      const b=document.createElement('b');b.textContent=p?(pos?`#${p.rank} / ${p.n}`:ptsM?`${p.points} pts`:`Top ${p.pct}%`):'—';
+      const n=document.createElement('span');n.textContent=(s.short||s.name)+(p&&DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):'')+(p?(ptsM?` · #${p.rank}`:` · ${p.points} pts`):'');
       row.append(i,b,n);tip.append(row);
     }
     tip.hidden=false;
@@ -685,19 +789,292 @@ $('#pq').addEventListener('keydown',e=>{
 $('#psugg').addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(b)selectPlayer(b.dataset.carne)});
 document.addEventListener('click',e=>{if(!e.target.closest('.psearch'))$('#psugg').hidden=true});
 $('#pseason').addEventListener('change',e=>{P.season=+e.target.value;renderPlayer()});
-$('#pbody').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(b){P.metric=b.dataset.metric;renderPlayer()}});
+$('#pbody').addEventListener('click',e=>{
+  const b=e.target.closest('[data-metric]');if(b){P.metric=b.dataset.metric;renderPlayer();return}
+  const c=e.target.closest('[data-compare]');if(c){C.season=+P.season;C.key=c.dataset.compare;C.players=[P.carne,null,null];showTab('compare');window.scrollTo(0,0)}});
 let rsT;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(!$('#view-player').hidden&&P.carne)renderPlayer()},150)});
+/* ---------- Comparar: up to three players in the same ranking ---------- */
+const C={season:null,key:null,players:[null,null,null],metric:'pos'};
+const shortName=n=>{const w=titleCase(n).split(' ');return w.length>=3?w[0]+' '+w[w.length-2]:w.slice(0,2).join(' ')};
+function compareCats(season){
+  const m=new Map();
+  for(const d of docs){if(d.season!==season)continue;const k=seriesKey(d);if(!m.has(k))m.set(k,{key:k,name:seriesName(d),order:seriesOrder(d)})}
+  return [...m.values()].sort((a,b)=>a.order-b.order);
+}
+function compareCandidates(){
+  const m=new Map();
+  for(const d of docs){
+    if(d.season!==C.season||seriesKey(d)!==C.key)continue;
+    for(const r of d.rows){if(d._base!=null&&r[4]===d._base)continue;
+      const a=m.get(r[1]);if(!a||d.stage>=a.stage)m.set(r[1],{carne:r[1],name:r[2],club:r[3],stage:d.stage,rank:r[0],f:fold(r[2])});}
+  }
+  return m;
+}
+function buildCompareOptions(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  if(!C.season)C.season=seasons[0];
+  $('#cseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#cseason').value=String(C.season);
+  const cats=compareCats(C.season);
+  if(!cats.some(c=>c.key===C.key))C.key=(cats.find(c=>c.name==='U13 Masc')||cats[0]||{}).key;
+  $('#ccat').innerHTML=cats.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');$('#ccat').value=C.key||'';
+  const cand=compareCandidates();
+  C.players=C.players.map(c=>c&&cand.has(c)?c:null);
+  C.players.forEach((c,i)=>{$('#cq'+i).value=c?titleCase(cand.get(c).name):''});
+}
+function showCompareSugg(i){
+  const q=fold($('#cq'+i).value).trim(),box=$('#csugg'+i);box.innerHTML='';
+  const cand=[...compareCandidates().values()].filter(a=>!C.players.includes(a.carne)||C.players[i]===a.carne);
+  const hits=(q?cand.filter(a=>a.f.includes(q)||a.carne.startsWith(q)):cand).sort((a,b)=>a.rank-b.rank).slice(0,8);
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){
+    const b=document.createElement('button');b.type='button';b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=titleCase(a.name);
+    const sm=document.createElement('small');sm.textContent=`#${a.rank} · ${clubName(a.club)}`;
+    b.append(l,sm);box.append(b);
+  }
+  box.hidden=false;
+}
+function compareSeries(){
+  const out=[];
+  C.players.forEach((carne,i)=>{
+    if(!carne)return;
+    const s=playerSeries(carne,C.season).list.find(x=>x.key===C.key);if(!s)return;
+    const a=athletes.find(x=>x.carne===carne);
+    // points at the start of the season (500, or Liga Mayor's carried-over value) for the season change
+    const firstDoc=docs.filter(d=>d.season===C.season&&seriesKey(d)===C.key&&d._map.has(carne)&&!(d._base!=null&&d._map.get(carne)[4]===d._base)).sort((x,y)=>x.stage-y.stage)[0];
+    const pp=firstDoc?prevPoints(firstDoc,firstDoc._map.get(carne)):null;
+    out.push({...s,carne,slot:i,color:`var(--s${i+1})`,name:titleCase(a?a.name:carne),short:shortName(a?a.name:carne),start:pp?pp.v:null});
+  });
+  return out;
+}
+function renderCompare(){
+  const body=$('#cbody');
+  const list=compareSeries();
+  const catName=(compareCats(C.season).find(c=>c.key===C.key)||{}).name||'';
+  if(!list.length){body.innerHTML=`<div class="pempty">Elija el ranking y hasta tres jugadores para compararlos etapa por etapa.</div>`;return}
+  const stages=[...new Set(docs.filter(d=>d.season===C.season&&seriesKey(d)===C.key).map(d=>d.stage))].sort((a,b)=>a-b);
+  // summary per player
+  const sum=list.map(s=>{const last=s.pts[s.pts.length-1];return {s,last,best:Math.min(...s.pts.map(p=>p.rank)),
+    change:s.start!=null?Math.round((last.points-s.start)*100)/100:null,played:s.pts.length,
+    ahead:stages.filter(st=>{const me=s.pts.find(p=>p.stage===st);if(!me)return false;return list.every(o=>o===s||!o.pts.find(p=>p.stage===st)||o.pts.find(p=>p.stage===st).rank>me.rank)}).length}});
+  const bestOf=(f,dir)=>{const v=sum.map(f).filter(x=>x!=null);return v.length?(dir<0?Math.min(...v):Math.max(...v)):null};
+  const bLast=bestOf(x=>x.last.stage===stages[stages.length-1]?x.last.rank:null,-1),bBest=bestOf(x=>x.best,-1),bPts=bestOf(x=>x.last.points,1),bCh=bestOf(x=>x.change,1),bAhead=bestOf(x=>x.ahead,1);
+  const w=(v,b)=>v!=null&&v===b&&list.length>1?' class="win"':'';
+  let h=`<div class="pcard">
+    <div class="pctl"><span class="lbl">Mostrar</span>
+      <button class="chip" data-cmetric="pos" aria-pressed="${C.metric==='pos'}">Posición</button>
+      <button class="chip" data-cmetric="pts" aria-pressed="${C.metric==='pts'}">Puntos</button>
+      <span class="summary">${esc(catName)} · ${C.season}</span><button class="chip pdfbtn" data-pdf="compare">Descargar PDF</button></div>
+    ${list.length>1?`<div class="legend">${list.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''}
+    <div class="pchart" id="cchart"></div>
+    <p class="pct" style="margin:6px 0 0">${C.metric==='pos'?'Posición en el ranking en cada etapa (escala logarítmica: más arriba = mejor).':'Puntos de ranking en cada etapa (más arriba = mejor).'}${DIVIDED.has(list[0].circuit)?' En Liga Mayor y Open Femenino la posición es dentro de la división de cada etapa; los puntos sí se comparan directamente.':''}</p>
+  </div>
+  <div class="tblwrap ptable ctable"><table><thead><tr><th>Resumen ${C.season}</th>${list.map(s=>`<th class="num"><span style="display:inline-block;width:12px;height:3px;background:${s.color};vertical-align:middle;margin-right:6px"></span>${esc(s.short)}</th>`).join('')}</tr></thead><tbody>
+    <tr><td>Posición actual</td>${sum.map(x=>`<td class="num"><b${w(x.last.stage===stages[stages.length-1]?x.last.rank:null,bLast)}>#${x.last.rank}</b> <small>/ ${x.last.n}${x.last.stage!==stages[stages.length-1]?' · Etapa '+(ROMAN[x.last.stage]||x.last.stage):''}</small></td>`).join('')}</tr>
+    <tr><td>Mejor posición del año</td>${sum.map(x=>`<td class="num"><b${w(x.best,bBest)}>#${x.best}</b></td>`).join('')}</tr>
+    <tr><td>Puntos actuales</td>${sum.map(x=>`<td class="num"><b${w(x.last.points,bPts)}>${x.last.points}</b></td>`).join('')}</tr>
+    <tr><td>Puntos ganados en ${C.season}</td>${sum.map(x=>`<td class="num"><b${w(x.change,bCh)}>${x.change==null?'—':(x.change>0?'+':'')+x.change}</b>${x.start!=null?` <small>desde ${x.start}</small>`:''}</td>`).join('')}</tr>
+    <tr><td>Etapas jugadas</td>${sum.map(x=>`<td class="num"><b>${x.played}</b> <small>de ${stages.length}</small></td>`).join('')}</tr>
+    ${list.length>1?`<tr><td>Etapas terminando mejor ubicado</td>${sum.map(x=>`<td class="num"><b${w(x.ahead,bAhead)}>${x.ahead}</b></td>`).join('')}</tr>`:''}
+  </tbody></table></div>
+  <div class="tblwrap ptable ctable"><table><thead><tr><th>Etapa</th>${list.map(s=>`<th class="num">${esc(s.short)}</th>`).join('')}</tr></thead><tbody>`+
+  stages.map(st=>{const ps=list.map(s=>s.pts.find(p=>p.stage===st));const br=Math.min(...ps.filter(Boolean).map(p=>p.rank));
+    return `<tr><td>Etapa ${ROMAN[st]||st}</td>${ps.map(p=>p?`<td class="num"><b${list.length>1&&p.rank===br?' class="win"':''}>#${p.rank}</b> <small>/ ${p.n}</small><br><small>${p.points} pts${DIVIDED.has(list[0].circuit)?' · '+esc(p.division.replace(/^Open /,'')):''}</small></td>`:'<td class="num"><small>—</small></td>').join('')}</tr>`}).join('')+
+  `</tbody></table></div>`;
+  body.innerHTML=h;
+  drawPlayerChart(list,stages,{host:'#cchart',metric:C.metric,season:C.season});
+}
+$('#cseason').addEventListener('change',e=>{C.season=+e.target.value;buildCompareOptions();renderCompare()});
+$('#ccat').addEventListener('change',e=>{C.key=e.target.value;C.players=[null,null,null];buildCompareOptions();renderCompare()});
+for(let i=0;i<3;i++){
+  const inp=$('#cq'+i),box=$('#csugg'+i);
+  inp.addEventListener('focus',()=>showCompareSugg(i));
+  inp.addEventListener('input',()=>{if(!inp.value.trim()&&C.players[i]){C.players[i]=null;renderCompare()}showCompareSugg(i)});
+  inp.addEventListener('keydown',e=>{
+    const items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+    let k=items.findIndex(b=>b.classList.contains('act'));
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[k]?.classList.remove('act');k=e.key==='ArrowDown'?Math.min(items.length-1,k+1):Math.max(0,k-1);items[k].classList.add('act')}
+    else if(e.key==='Enter'){e.preventDefault();(items[k]||items[0]).click()}
+    else if(e.key==='Escape')box.hidden=true;
+  });
+  box.addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(!b)return;C.players[i]=b.dataset.carne;inp.value=b.querySelector('span').textContent;box.hidden=true;renderCompare()});
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#view-compare .psearch'))document.querySelectorAll('#view-compare .sugg').forEach(x=>x.hidden=true)});
+$('#cbody').addEventListener('click',e=>{const b=e.target.closest('[data-cmetric]');if(b){C.metric=b.dataset.cmetric;renderCompare()}});
+let rsC;window.addEventListener('resize',()=>{clearTimeout(rsC);rsC=setTimeout(()=>{if(!$('#view-compare').hidden)renderCompare()},150)});
+/* ---------- Clubes ---------- */
+const K={season:null,circuit:'',q:'',open:null};
+function clubStats(){
+  const m=new Map();
+  for(const arr of groups.values()){
+    const d=arr[arr.length-1];if(d.season!==K.season||(K.circuit&&d.circuit!==K.circuit))continue;
+    const n=activeCount(d);
+    for(const r of d.rows){if(d._base!=null&&r[4]===d._base)continue;
+      const c=clubName(r[3]);if(!c||c==='—')continue;
+      if(!m.has(c))m.set(c,{club:c,players:new Set(),entries:[]});
+      const x=m.get(c);x.players.add(r[1]);x.entries.push({carne:r[1],name:titleCase(r[2]),rank:r[0],n,points:r[4],label:groupLabel(d),circuit:d.circuit,stage:d.stage,order:sortKeyOf(d)});}
+  }
+  const list=[...m.values()].map(x=>{x.entries.sort((a,b)=>a.rank-b.rank||a.order-b.order);return {...x,nPlayers:x.players.size,top3:x.entries.filter(e=>e.rank<=3).length,top10:x.entries.filter(e=>e.rank<=10).length,best:x.entries[0]}});
+  list.sort((a,b)=>b.top3-a.top3||b.top10-a.top10||b.nPlayers-a.nPlayers||a.club.localeCompare(b.club,'es'));
+  list.forEach((x,i)=>x.pos=i+1);
+  return list;
+}
+const sortKeyOf=d=>circRank(d.circuit)*1000+divRank(d.division);
+function buildClubFilters(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);if(!K.season)K.season=seasons[0];
+  $('#kseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#kseason').value=String(K.season);
+  const circs=[...new Set(docs.filter(d=>d.season===K.season).map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b));
+  if(K.circuit&&!circs.includes(K.circuit))K.circuit='';
+  $('#kcircuit').innerHTML='<option value="">Todos</option>'+circs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');$('#kcircuit').value=K.circuit;
+}
+function clubRows(){const q=fold(K.q).trim();return clubStats().filter(x=>!q||fold(x.club).includes(q))}
+function renderClubs(){
+  const rows=clubRows();
+  $('#ksummary').textContent=`${rows.length} club${rows.length===1?'':'es'} · última etapa de cada ranking${K.circuit?' · '+K.circuit:''} ${K.season}`;
+  let h='';
+  for(const x of rows){
+    const open=K.open===x.club;
+    h+=`<tr class="row krow" data-club="${esc(x.club)}" tabindex="0" aria-expanded="${open}"><td class="num pos${x.pos===1?' top1':''}">${x.pos}</td><td class="name">${esc(x.club)}</td><td class="num">${x.nPlayers}</td><td class="num pts">${x.top3}</td><td class="num">${x.top10}</td><td>${x.best?`#${x.best.rank} ${esc(x.best.label)} <span class="club">· ${esc(x.best.name)}</span>`:''}</td></tr>`;
+    if(open){
+      h+=`<tr class="kdetail"><td colspan="6"><div class="kd-head"><b>${esc(x.club)}</b> <span class="club">${x.nPlayers} jugadores con resultados</span> <button class="btn sm" data-kview="${esc(x.club)}">Ver en Ranking →</button></div><table class="career"><tbody>`+
+        x.entries.map(e=>`<tr class="kplayer" data-carne="${esc(e.carne)}"><td class="num"><b>#${e.rank}</b> <span class="club">/ ${e.n}</span></td><td>${esc(e.name)}</td><td class="club">${esc(e.label)} · ${esc(e.circuit)}</td><td class="num">${e.points} pts</td></tr>`).join('')+`</tbody></table></td></tr>`;
+    }
+  }
+  $('#kbody').innerHTML=h||'<tr><td colspan="6" class="empty">Ningún club coincide.</td></tr>';
+}
+$('#kseason').addEventListener('change',e=>{K.season=+e.target.value;K.open=null;buildClubFilters();renderClubs()});
+$('#kcircuit').addEventListener('change',e=>{K.circuit=e.target.value;K.open=null;renderClubs()});
+$('#kq').addEventListener('input',e=>{K.q=e.target.value;renderClubs()});
+$('#kbody').addEventListener('click',e=>{
+  const v=e.target.closest('[data-kview]');if(v){F.season=String(K.season);F.circuit=K.circuit;F.div='';F.gender='';F.club=v.dataset.kview;F.stage='latest';buildFilters();showTab('rank');render();window.scrollTo(0,0);return}
+  const pl=e.target.closest('.kplayer');if(pl){P.season=K.season;$('#pseason').value=String(K.season);showTab('player');selectPlayer(pl.dataset.carne);window.scrollTo(0,0);return}
+  const r=e.target.closest('.krow');if(r){K.open=K.open===r.dataset.club?null:r.dataset.club;renderClubs()}});
+$('#kbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const r=e.target.closest('.krow');if(r){K.open=K.open===r.dataset.club?null:r.dataset.club;renderClubs()}}});
+
+/* ---------- PDF downloads (jsPDF, loaded on first use) ---------- */
+const PDF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'];
+const loadScript=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`)&&window.jspdf){res();return}const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error('No se pudo cargar '+src));document.head.append(sc)});
+let logoData=null;
+async function getLogo(){if(logoData)return logoData;try{const b=await (await fetch('logo.png')).blob();logoData=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}catch(e){logoData=''}return logoData}
+const BLUE=[37,82,168],BLUE2=[53,106,212],RED=[200,32,29],INK=[19,33,61],MUTED=[86,99,125];
+async function newPdf(title,subtitle,landscape=false){
+  await loadScript(PDF_LIBS[0]);await loadScript(PDF_LIBS[1]);
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:landscape?'l':'p',unit:'pt',format:'letter'});
+  const W=doc.internal.pageSize.getWidth(),logo=await getLogo();
+  doc.setFillColor(...BLUE);doc.rect(0,0,W,64,'F');doc.setFillColor(...RED);doc.rect(0,64,W,3,'F');
+  if(logo){doc.setFillColor(255,255,255);doc.circle(44,32,23,'F');doc.addImage(logo,'PNG',23,11,42,42)}
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(title,78,30);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text(subtitle,78,47);
+  doc._startY=86;return doc;
+}
+function pdfFooters(doc){
+  const n=doc.getNumberOfPages(),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  const when=new Date().toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'});
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(...MUTED);
+    doc.text(`Tenis de Mesa Curridabat · Ranking Nacional · Fuente: resultados publicados por FECOTEME · ${when}`,40,H-22);
+    doc.text(`Página ${i} de ${n}`,W-40,H-22,{align:'right'});}
+}
+const tableStyle={styles:{font:'helvetica',fontSize:8.5,cellPadding:3.5,textColor:INK,lineColor:[214,222,235],lineWidth:.5},headStyles:{fillColor:BLUE2,textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[244,247,252]},margin:{left:40,right:40,top:40}};
+async function svgImage(svg,scale=2){
+  // Resolve the theme colors with the light palette so the chart prints on white
+  const root=document.documentElement,prev=root.getAttribute('data-theme');root.setAttribute('data-theme','light');
+  const cs=getComputedStyle(root);let str=new XMLSerializer().serializeToString(svg);
+  str=str.replace(/var\((--[\w-]+)\)/g,(m,v)=>cs.getPropertyValue(v).trim()||'#13213D');
+  if(prev==null)root.removeAttribute('data-theme');else root.setAttribute('data-theme',prev);
+  str=str.replace('<svg','<svg font-family="Helvetica, Arial, sans-serif"');
+  const vb=svg.viewBox.baseVal,w=vb.width,h=vb.height;
+  const url=URL.createObjectURL(new Blob([str],{type:'image/svg+xml;charset=utf-8'}));
+  const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});
+  const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+  return {data:c.toDataURL('image/png'),w,h};
+}
+async function addChart(doc,svg,y){
+  if(!svg)return y;const im=await svgImage(svg);const W=doc.internal.pageSize.getWidth()-80,h=W*im.h/im.w;
+  doc.addImage(im.data,'PNG',40,y,W,h);return y+h+12;
+}
+const pdfName=parts=>parts.filter(Boolean).map(p=>slugify(String(p))).join('-')+'.pdf';
+const slugify=s=>fold(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function mvText(d,r){
+  if(r[5]==='asc')return 'Asciende';if(r[5]==='desc')return 'Desciende';
+  const dm=divMove(d,r);if(dm)return `${dm.up?'Sube':'Baja'} de ${dm.from}`;
+  if(!d._prev)return '';const p=d._prev._map.get(r[1]);if(!p)return 'Nuevo';
+  const x=p[0]-r[0];return x>0?`+${x}`:x<0?String(x):'=';
+}
+function ptsText(d,r){const pp=prevPoints(d,r);if(!pp)return '';const x=Math.round((r[4]-pp.v)*100)/100;return x>0?'+'+x:String(x)}
+async function pdfRanking(){
+  const sel=rankingSelection().filter(x=>x.rows.length),ex=extraMode(sel);
+  const filt=[F.circuit||'Todos los circuitos',F.div||null,F.gender?GENDER[F.gender]:null,F.club?'Club: '+F.club:null,F.q?'Búsqueda: '+F.q:null,F.stage==='latest'?'Última etapa':'Etapa '+(ROMAN[+F.stage]||F.stage)].filter(Boolean).join(' · ');
+  const doc=await newPdf(`Ranking Nacional ${F.season}`,filt);let y=doc._startY;
+  if(!sel.length){doc.setTextColor(...INK);doc.text('Ningún atleta coincide con estos filtros.',40,y)}
+  for(const {d,rows,all,hideBase} of sel){
+    if(y>doc.internal.pageSize.getHeight()-90){doc.addPage();y=50}
+    doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(groupLabel(d),40,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MUTED);
+    doc.text(`${d.circuit} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base, no incluidos)`:''}`,40,y+12);
+    const head=['Pos.','Mov.','Atleta','Club','Puntos','+Pts'].concat(ex?[ex.label]:[]).concat(['Carné']);
+    const body=rows.map(r=>{const e=ex?extraInfo(d,r):null;return [r[0],mvText(d,r),titleCase(r[2]),clubName(r[3]),r[4],ptsText(d,r)].concat(ex?[e?e.text+(e.stay?' (sigue)':e.up&&d.circuit==='Liga Menor'?' (sube)':''):'']:[]).concat([r[1].startsWith('n-')?'':r[1]])});
+    doc.autoTable({...tableStyle,head:[head],body,startY:y+20,columnStyles:{0:{halign:'right',cellWidth:30},4:{halign:'right'},5:{halign:'right'}}});
+    y=doc.lastAutoTable.finalY+22;
+  }
+  pdfFooters(doc);doc.save(pdfName(['ranking',F.season,F.circuit,F.div,F.gender&&GENDER[F.gender],F.club]));
+}
+async function pdfPlayer(){
+  const a=athletes.find(x=>x.carne===P.carne);if(!a)return;
+  const {list,inactive}=playerSeries(P.carne,+P.season);
+  const doc=await newPdf(titleCase(a.name),`${clubName(a.club)}${P.carne.startsWith('n-')?'':' · carné '+P.carne} · Temporada ${P.season} · ${list.length} ranking${list.length===1?'':'s'}`);
+  let y=await addChart(doc,$('#pchart svg'),doc._startY);
+  const stages=[...new Set(docs.filter(d=>d.season===+P.season).map(d=>d.stage))].sort((x,z)=>x-z);
+  doc.autoTable({...tableStyle,startY:y,head:[['Ranking'].concat(stages.map(s=>'Etapa '+(ROMAN[s]||s)))],
+    body:list.map(s=>[s.name].concat(stages.map(st=>{const p=s.pts.find(q=>q.stage===st);return p?`#${p.rank} / ${p.n}\n${p.points} pts${DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):''}`:'—'})))});
+  y=doc.lastAutoTable.finalY+14;
+  if(inactive.length){doc.setFontSize(8.5);doc.setTextColor(...MUTED);doc.text('También inscrito, sin resultados (solo puntaje base): '+inactive.join(', ')+'.',40,y)}
+  pdfFooters(doc);doc.save(pdfName(['jugador',a.name,P.season]));
+}
+async function pdfCompare(){
+  const list=compareSeries();if(!list.length)return;
+  const catName=(compareCats(C.season).find(c=>c.key===C.key)||{}).name||'';
+  const doc=await newPdf(`Comparación · ${catName} ${C.season}`,list.map(s=>s.name).join(' · '));
+  let y=await addChart(doc,$('#cchart svg'),doc._startY);
+  for(const t of document.querySelectorAll('#cbody table')){
+    doc.autoTable({...tableStyle,html:t,startY:y,useCss:false,didParseCell:c=>{c.cell.text=c.cell.text.map(x=>x.replace(/\s+/g,' ').trim())}});
+    y=doc.lastAutoTable.finalY+16;
+  }
+  pdfFooters(doc);doc.save(pdfName(['comparacion',catName,C.season]));
+}
+async function pdfClubs(){
+  const rows=clubRows();
+  const doc=await newPdf(`Clubes · ${K.season}`,`${K.circuit||'Todos los circuitos'} · última etapa de cada ranking${K.q?' · búsqueda: '+K.q:''}`);
+  doc.autoTable({...tableStyle,startY:doc._startY,head:[['#','Club','Jugadores','Top 3','Top 10','Mejor resultado']],
+    body:rows.map(x=>[x.pos,x.club,x.nPlayers,x.top3,x.top10,x.best?`#${x.best.rank} ${x.best.label} · ${x.best.name}`:''])});
+  const detail=rows.length===1?rows[0]:rows.find(x=>x.club===K.open);
+  if(detail){
+    let y=doc.lastAutoTable.finalY+22;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...INK);doc.text(`Jugadores de ${detail.club}`,40,y);
+    doc.autoTable({...tableStyle,startY:y+8,head:[['Pos.','Atleta','Ranking','Circuito','Puntos']],body:detail.entries.map(e=>[`#${e.rank} / ${e.n}`,e.name,e.label,e.circuit,e.points])});
+  }
+  pdfFooters(doc);doc.save(pdfName(['clubes',K.season,K.circuit,detail&&detail.club]));
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-pdf]');if(!b)return;
+  const label=b.textContent;b.disabled=true;b.textContent='Generando PDF…';
+  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs})[b.dataset.pdf]();b.textContent=label}
+  catch(err){console.error(err);b.textContent='No se pudo generar el PDF'}
+  finally{b.disabled=false;setTimeout(()=>{b.textContent=label},2500)}
+});
 function showTab(name){
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===name)));
-  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';
+  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';$('#view-compare').hidden=name!=='compare';$('#view-clubs').hidden=name!=='clubs';
+  if(name==='clubs'){buildClubFilters();renderClubs()}
   if(name==='player')renderPlayer();
+  if(name==='compare'){buildCompareOptions();renderCompare()}
 }
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
 
 /* Data */
 fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
   docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
-  index();buildFilters();render();renderStages();buildAthletes();
+  if(j.ligaMayorDivisions)MAYOR_MIN={...MAYOR_MIN,...j.ligaMayorDivisions};
+  index();buildAgeIndex();buildFilters();render();renderStages();buildAthletes();
   const hm=/^#j(.+)$/.exec(location.hash);if(hm){showTab('player');selectPlayer(decodeURIComponent(hm[1]),false)}
   if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
 }).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
