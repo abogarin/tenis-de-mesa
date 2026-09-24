@@ -1,0 +1,87 @@
+name: Publish ranking
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 12 * * 1"   # every Monday, 6:00 am Costa Rica time
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install openpyxl==3.1.5
+
+      - name: Download new files from FECOTEME
+        run: python scripts/fetch_fecoteme.py
+        continue-on-error: true   # if the federation site is down, still publish what we have
+
+      - name: Convert result files
+        id: convert
+        run: |
+          set -o pipefail
+          python scripts/convert.py 2>&1 | tee convert.log
+        continue-on-error: true
+
+      - name: Report
+        run: |
+          {
+            echo "## Ranking update"
+            echo '```'
+            cat convert.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save data to the repository
+        run: |
+          git config user.name "ranking-bot"
+          git config user.email "ranking-bot@users.noreply.github.com"
+          git add -A inbox archive data site/data
+          if ! git diff --cached --quiet; then
+            git commit -m "Update ranking data"
+            git push
+          fi
+
+      - name: Include the original Excel files in the site
+        run: |
+          mkdir -p site/files
+          cp -r archive/. site/files/ 2>/dev/null || true
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Fail if some files could not be processed
+        if: steps.convert.outcome == 'failure'
+        run: |
+          echo "Some files were left in inbox/. See the Report step or the run summary."
+          exit 1
+
+  deploy:
+    needs: build
+    if: always() && needs.build.result != 'cancelled'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
