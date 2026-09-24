@@ -516,6 +516,7 @@ def main():
         stages.append(d)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"generatedAt": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                               "ligaMayorDivisions": mayor_thresholds(),
                                "stages": stages}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} with {len(stages)} stages")
 
