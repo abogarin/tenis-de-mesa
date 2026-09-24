@@ -1,5 +1,17 @@
 {
   "pages": [
-    { "season": 2026, "url": "https://fecoteme.com/ranking-nacional-2026/" }
-  ]
+    {
+      "season": 2026,
+      "url": "https://fecoteme.com/ranking-nacional-2026/"
+    }
+  ],
+  "ligaMayorDivisions": {
+    "Primera": 1900,
+    "Segunda": 1700,
+    "Tercera": 1500,
+    "Cuarta": 1300,
+    "Quinta": 1100,
+    "Sexta": 0
+  },
+  "_ligaMayorDivisions_note": "Minimum points per Liga Mayor division. Used only when a stage file has no CATEGORIA column. Players who played one division up in the nearest stage that lists divisions stay there."
 }
