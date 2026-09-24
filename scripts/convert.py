@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Convert ranking workbooks into the JSON the website reads.
 
-For every .xlsx under inbox/ (including inbox/2025/, inbox/2026/, ...):
+Every run rebuilds all stages from archive/<year>/ (files already processed) plus
+inbox/<year>/ (new files), so improvements to this script also apply to older files.
+For every workbook:
   1. Find the ranking table: the "Ranking Final" sheet, or sheets named "Ranking ...",
      or any other sheet with Nombre + Puntos columns.
   2. Work out circuit, season, division (U9…U19, Mayor, Open A/B, Master, PTT),
@@ -11,8 +13,9 @@ For every .xlsx under inbox/ (including inbox/2025/, inbox/2026/, ...):
        c) "<file>.hint.json" written by fetch_fecoteme.py from the FECOTEME link label
        d) the file name and the inbox/<year>/ folder
      Disagreements between (b) and (c) are reported as warnings.
-  3. Save data/stages/<id>.json (a re-upload of the same stage replaces it) and move
-     the workbook to archive/<season>/.
+  3. Save data/stages/<id>.json (a newer upload of the same stage replaces it); new
+     workbooks are moved from inbox/ to archive/<season>/.
+To remove a stage, delete its workbook from archive/.
 Finally all stages are combined into site/data/ranking.json.
 """
 import datetime as dt
@@ -34,7 +37,7 @@ ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 
 ORD_WORDS = {"PRIMER": 1, "PRIMERO": 1, "PRIMERA": 1, "1ER": 1, "1RO": 1, "1RN": 1, "SEGUNDO": 2, "SEGUNDA": 2, "2DO": 2, "2RN": 2,
              "TERCER": 3, "TERCERO": 3, "TERCERA": 3, "3ER": 3, "3RO": 3, "3CER": 3, "3RN": 3, "CUARTO": 4, "CUARTA": 4, "4TO": 4, "4RN": 4,
              "QUINTO": 5, "QUINTA": 5, "5TO": 5, "5RN": 5, "SEXTO": 6, "6TO": 6}
-SKIP_SHEETS = re.compile(r"^(INSCRIP|GRUPO|LLAVE|SORTEO|PLANILLA|PREMIA|TABULA)", re.I)
+SKIP_SHEETS = re.compile(r"^(INSCRIP|GRUPO|LLAVE|SORTEO|PLANILLA|PREMIA)", re.I)  # hidden sheets are always skipped
 
 
 def fold(s):
@@ -48,18 +51,27 @@ def slug(s):
 
 # ---------- reading the ranking table ----------
 
+def rank_by_points(rows):
+    rows.sort(key=lambda r: -r[4])
+    for i, r in enumerate(rows):
+        r[0] = rows[i - 1][0] if i and rows[i - 1][4] == r[4] else i + 1
+    return rows
+
+
 def table_from_sheet(ws):
+    """Return {sub_division_or_None: rows}. A 'Categoría' column (e.g. PTT classes) splits the table."""
     rows = list(ws.iter_rows(values_only=True))
     for h, r in enumerate(rows[:20]):
         hdr = [fold(c).strip() for c in r]
         iN = next((i for i, c in enumerate(hdr) if "NOMBRE" in c or c in ("JUGADOR", "ATLETA")), None)
-        iP = next((i for i, c in enumerate(hdr) if "PUNTO" in c or c in ("PTS", "TOTAL")), None)
+        iP = next((i for i, c in enumerate(hdr) if "PUNTO" in c or "POINT" in c or c in ("PTS", "TOTAL")), None)
         if iN is None or iP is None:
             continue
         iR = next((i for i, c in enumerate(hdr) if c.startswith("RANK") or c in ("POS", "POSICION", "#")), None)
         iC = next((i for i, c in enumerate(hdr) if c.startswith("CARN") or c in ("ID", "CEDULA", "LICENCIA")), None)
         iK = next((i for i, c in enumerate(hdr) if "CLUB" in c or "EQUIPO" in c), None)
-        out = []
+        iG = next((i for i, c in enumerate(hdr) if c.startswith("CATEGOR") or c.startswith("CLASE")), None)
+        groups = {}
         for r2 in rows[h + 1:]:
             if len(r2) <= max(iN, iP):
                 continue
@@ -75,32 +87,41 @@ def table_from_sheet(ws):
                 carne = "n-" + slug(name)  # no carné column: fall back to the name
             rank = int(r2[iR]) if iR is not None and isinstance(r2[iR], (int, float)) else None
             club = str(r2[iK]).strip() if iK is not None and r2[iK] is not None else ""
-            out.append([rank, carne, name, club, round(float(pts), 2) if pts % 1 else int(pts)])
-        if out:
-            # fill missing ranks from order (ties share the rank)
-            if any(r[0] is None for r in out):
-                out.sort(key=lambda r: -r[4])
-                for i, r in enumerate(out):
-                    r[0] = out[i - 1][0] if i and out[i - 1][4] == r[4] else i + 1
-            return out
+            sub = None
+            if iG is not None and len(r2) > iG and r2[iG] is not None and str(r2[iG]).strip():
+                sub = re.sub(r"\s+", "", str(r2[iG]).strip().upper())
+            groups.setdefault(sub, []).append([rank, carne, name, club, round(float(pts), 2) if pts % 1 else int(pts)])
+        if groups:
+            for k, out in groups.items():
+                # ranks missing, or a category column (ranks would span classes): rank by points
+                if any(x[0] is None for x in out) or len(groups) > 1:
+                    rank_by_points(out)
+            return groups
     return None
 
 
 def read_tables(wb):
-    """Return [(sheet_name_or_None, rows)]. More than one entry = several divisions in one file."""
+    """Return [(sub_division_or_None, rows)]. More than one entry = several divisions in one file."""
+    def flat(sheet_label, groups):
+        if len(groups) == 1 and None in groups:
+            return [(sheet_label, groups[None])]
+        return [((f"{sheet_label} {k}" if sheet_label else k) if k else sheet_label, v) for k, v in groups.items()]
+
     if "Ranking Final" in wb.sheetnames:
-        t = table_from_sheet(wb["Ranking Final"])
-        if t:
-            return [(None, t)]
-    named = [n for n in wb.sheetnames if re.match(r"\s*RANK", fold(n)) and wb[n].sheet_state == "visible"]
-    tables = [(n, t) for n in named if (t := table_from_sheet(wb[n]))]
+        g = table_from_sheet(wb["Ranking Final"])
+        if g:
+            return flat(None, g)
+    visible = [n for n in wb.sheetnames if wb[n].sheet_state == "visible"]
+    named = [n for n in visible if re.match(r"\s*RANK", fold(n))]
+    tables = [(n, g) for n in named if (g := table_from_sheet(wb[n]))]
     if tables:
-        return [(None, tables[0][1])] if len(tables) == 1 else tables
-    cands = [(n, t) for n in wb.sheetnames
-             if not SKIP_SHEETS.match(fold(n)) and wb[n].sheet_state == "visible" and (t := table_from_sheet(wb[n]))]
+        if len(tables) == 1:
+            return flat(None, tables[0][1])
+        return [x for n, g in tables for x in flat(n, g)]
+    cands = [(n, g) for n in visible if not SKIP_SHEETS.match(fold(n)) and (g := table_from_sheet(wb[n]))]
     if len(cands) > 1 and all(bracket_like(n) for n, _ in cands):
-        return cands  # one sheet per division, e.g. Master 30-39 / 40-49 / 50-59 / 60+
-    return [(None, cands[0][1])] if cands else []
+        return [x for n, g in cands for x in flat(n, g)]  # one sheet per division, e.g. Master 30-39 / 60+
+    return flat(None, cands[0][1]) if cands else []
 
 
 # ---------- metadata ----------
@@ -251,7 +272,8 @@ def metadata(path, wb, warnings):
     season = override.get("season") or hint.get("season") or folder_year or (int(date[:4]) if date else None) \
         or (int(name_year.group(1)) if name_year else dt.date.today().year)
     stage = override.get("stage") or hint.get("stage") or text_stage(path.stem.split("-", 1)[-1] if re.match(r"^[A-Za-z0-9]{12}-", path.stem) else path.stem) or text_stage(path.stem)
-    event = override.get("event") or hint.get("sourceLabel") or path.stem
+    label = hint.get("sourceLabel") or ""
+    event = override.get("event") or (label if re.search(r"ranking", label, re.I) else "") or re.sub(r"^[A-Za-z0-9]{12}-", "", path.stem).replace("-", " ")
     return {"circuit": circuit, "season": int(season), "division": division, "gender": gender, "stage": stage,
             "event": event, "date": override.get("date") or date or "", "sourceUrl": hint.get("sourceUrl", "")}
 
@@ -261,13 +283,17 @@ def stage_id(d):
 
 
 def main():
+    """Rebuild every stage from all workbooks: archive/ (already seen) + inbox/ (new).
+    Rebuilding each time means improvements to this script also apply to older files."""
     STAGES.mkdir(parents=True, exist_ok=True)
     errors, warnings = [], []
-    for path in sorted(INBOX.rglob("*.xls*")):
-        if path.name.startswith("~$") or path.suffix.lower() not in (".xlsx", ".xlsm"):
-            continue
+    archived = sorted(p for p in ARCHIVE.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
+    incoming = sorted(p for p in INBOX.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
+    built = {}  # stage id -> (doc, file)
+    for path in archived + incoming:
+        is_new = path in incoming
         try:
-            wb = openpyxl.load_workbook(path, data_only=True)
+            wb = openpyxl.load_workbook(path, data_only=True, read_only=False)
         except Exception as e:  # noqa: BLE001
             errors.append(f"{path.relative_to(ROOT)}: could not open ({e})")
             continue
@@ -279,10 +305,11 @@ def main():
         saved = []
         for sheet, rows in tables:
             d = dict(meta)
-            if sheet:  # several divisions in one workbook, e.g. Master age brackets
+            if sheet:  # several divisions in one workbook, e.g. Master age brackets or PTT classes
                 d["division"] = text_division(fold(sheet)) or re.sub(r"(?i)^\s*ranking\s*", "", sheet).replace(" ", "").strip() or d["division"]
-                if d["circuit"] == "Master" and not d["division"].startswith("Master"):
-                    d["division"] = "Master " + d["division"]
+                for circ in ("Master", "PTT"):
+                    if d["circuit"] == circ and not d["division"].startswith(circ):
+                        d["division"] = f"{circ} {d['division']}"
             missing = [k for k in ("circuit", "division", "stage") if not d.get(k)]
             if missing:
                 errors.append(f"{path.relative_to(ROOT)}{' / ' + sheet if sheet else ''}: could not detect {', '.join(missing)}. "
@@ -291,15 +318,28 @@ def main():
             d["stage"] = int(d["stage"])
             d.update(sourceFile=path.name, rows=rows)
             sid = stage_id(d)
-            (STAGES / f"{sid}.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+            if sid in built and built[sid][1] != path.name:
+                prev = built[sid][1]
+                keep_prev = bool(re.search(r"REV|CORREC", fold(prev))) and not re.search(r"REV|CORREC", fold(path.name)) and not is_new
+                warnings.append(f"{sid}: found in two files ({prev} and {path.name}); using {prev if keep_prev else path.name}.")
+                if keep_prev:
+                    continue
+            built[sid] = (d, path.name)
             saved.append(sid)
-            print(f"OK  {path.relative_to(ROOT)}{' / ' + sheet if sheet else ''} -> {sid} ({len(rows)} athletes)")
-        if saved:
+            if is_new:
+                print(f"NEW {path.relative_to(ROOT)}{' / ' + sheet if sheet else ''} -> {sid} ({len(rows)} athletes)")
+        if saved and is_new:
             dest = ARCHIVE / str(meta["season"])
             dest.mkdir(parents=True, exist_ok=True)
             for p in (path, path.with_name(path.name + ".json"), path.with_name(path.name + ".hint.json")):
                 if p.exists():
                     shutil.move(str(p), dest / p.name)
+
+    for f in STAGES.glob("*.json"):
+        f.unlink()
+    for sid, (d, _) in built.items():
+        (STAGES / f"{sid}.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    print(f"Rebuilt {len(built)} stages from {len(archived)} archived + {len(incoming)} new file(s)")
 
     stages = []
     for f in sorted(STAGES.glob("*.json")):
@@ -311,8 +351,7 @@ def main():
                                "stages": stages}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} with {len(stages)} stages")
 
-    old = load_json(WARN_FILE).get("warnings", []) if WARN_FILE.exists() else []
-    WARN_FILE.write_text(json.dumps({"warnings": (old + warnings)[-200:]}, ensure_ascii=False, indent=1), encoding="utf-8")
+    WARN_FILE.write_text(json.dumps({"warnings": warnings}, ensure_ascii=False, indent=1), encoding="utf-8")
     for w in warnings:
         print("WARNING", w)
     if errors:
