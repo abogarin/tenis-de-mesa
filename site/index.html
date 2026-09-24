@@ -221,13 +221,13 @@ footer.src a{color:inherit}
     <div class="tblwrap">
       <table>
         <thead><tr>
-          <th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num">+Pts</th><th class="num">Carné</th>
+          <th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num" title="Puntos ganados desde la etapa anterior. En la primera etapa del año, o la primera vez que aparece el jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090.">+Pts</th><th class="num">Carné</th>
         </tr></thead>
         <tbody id="tbody"><tr><td colspan="7" class="empty">Cargando ranking…</td></tr></tbody>
       </table>
     </div>
     <div class="more" id="more" hidden><button class="btn" id="moreBtn">Mostrar más</button></div>
-    <p class="note"><span id="updated"></span> Mov. compara con la etapa anterior de la misma categoría; en la primera etapa del año, con el cierre de la temporada anterior. Toque a un atleta para ver su historial completo.</p>
+    <p class="note"><span id="updated"></span> Mov. compara la posición con la etapa anterior de la misma categoría (en la primera etapa del año, con el cierre de la temporada anterior). +Pts: puntos ganados desde la etapa anterior; en la primera etapa del año, o la primera vez que aparece un jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090. Toque a un atleta para ver su historial completo.</p>
   </section>
 
   <section id="view-player" hidden>
@@ -292,16 +292,20 @@ function index(){
   }
   for(const arr of groups.values())arr.sort((a,b)=>a.stage-b.stage);
   // Base score: the value most players share without results (it drops each stage). Hidden by default.
-  divAt=new Map();
+  divAt=new Map();ptsAt=new Map();stageSeq=new Map();
   for(const d of docs){
     const c=new Map();d.rows.forEach(r=>c.set(r[4],(c.get(r[4])||0)+1));
     let best=null,n=0;c.forEach((v,k)=>{if(v>n){n=v;best=k}});
     d._base=(n>=20&&n/d.rows.length>=0.3)?best:null;
     const k=d.season+'|'+d.circuit+'|'+d.gender+'|'+d.stage;if(!divAt.has(k))divAt.set(k,new Map());
     d.rows.forEach(r=>divAt.get(k).set(r[1],d.division));
+    const ck=d.circuit+'|'+d.gender,sk=ck+'|'+(d.season*100+d.stage);
+    if(!ptsAt.has(sk))ptsAt.set(sk,new Map());d.rows.forEach(r=>ptsAt.get(sk).set(r[1],r[4]));
+    if(!stageSeq.has(ck))stageSeq.set(ck,[]);if(!stageSeq.get(ck).includes(d.season*100+d.stage))stageSeq.get(ck).push(d.season*100+d.stage);
   }
+  stageSeq.forEach(a=>a.sort((x,y)=>x-y));
 }
-let divAt=new Map();
+let divAt=new Map(),ptsAt=new Map(),stageSeq=new Map();
 const DIVIDED=new Set(['Liga Mayor','Open Femenino']);
 function divMove(d,r){
   // Player was in a different division of the same circuit in the previous stage of the season
@@ -353,7 +357,30 @@ function mvCell(d,r){
   if(diff<0)return `<span class="mv down">▼ ${-diff}</span>`;
   return '<span class="mv eq">=</span>';
 }
-function dPts(d,r){if(!d._prev)return '';const p=d._prev._map.get(r[1]);if(!p)return '';const x=Math.round((r[4]-p[4])*100)/100;return x>0?`<span class="dpts">+${x}</span>`:x<0?`<span class="mv down">${x}</span>`:'<span class="club">0</span>'}
+// Starting points: Liga Mayor carries points over between seasons (new players start at 1090, Sexta);
+// the other circuits reset every season to 500.
+const START_PTS={'Liga Mayor':1090};const startPts=d=>START_PTS[d.circuit]??500;
+function prevPoints(d,r){
+  if(d.circuit==='Liga Mayor'){
+    // previous stage in any division, including the end of last season
+    const k=d.circuit+'|'+d.gender,seq=stageSeq.get(k)||[],i=seq.indexOf(d.season*100+d.stage);
+    for(let j=i-1;j>=0;j--){
+      const v=ptsAt.get(k+'|'+seq[j])?.get(r[1]);if(v==null)continue;
+      // new season: points carry over, but never below the 1090 starting value
+      if(Math.floor(seq[j]/100)!==d.season)return {v:Math.max(v,startPts(d)),from:'season'};
+      return {v,from:'prev'};
+    }
+    return {v:startPts(d),from:'start'};
+  }
+  if(d._prev&&d._prev.season===d.season){const p=d._prev._map.get(r[1]);if(p)return {v:p[4],from:'prev'};}
+  if(divMove(d,r))return null;            // changed Open A/B: the federation resets the points
+  return {v:startPts(d),from:'start'};
+}
+function dPts(d,r){
+  const pp=prevPoints(d,r);if(!pp)return '';
+  const x=Math.round((r[4]-pp.v)*100)/100;
+  const t=pp.from==='start'?` title="Desde los ${pp.v} puntos iniciales"`:pp.from==='season'?` title="Desde el cierre de ${d.season-1} (${pp.v} pts; mínimo 1090)"`:' title="Desde la etapa anterior"';
+  return x>0?`<span class="dpts"${t}>+${x}</span>`:x<0?`<span class="mv down"${t}>${x}</span>`:`<span class="club"${t}>0</span>`}
 function render(){
   const vg=visibleGroups();
   renderStagebar(vg);
