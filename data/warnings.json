@@ -1,3 +1,7 @@
 {
- "warnings": []
+ "warnings": [
+  "2026__liga-menor__u13-M__e3: found in two files (III-Liga-Menor-U13-Masculino.xlsx and RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx); using RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx.",
+  "2026__liga-menor__u13-M__e4: found in two files (IV-RN-Menor-U13-MASC.xlsx and v8gBygCZAW6X-IV-RN-Menor-U13-MASC.xlsx); using v8gBygCZAW6X-IV-RN-Menor-U13-MASC.xlsx.",
+  "2026__liga-menor__u13-F__e1: found in two files (JYypUoRl7YwT-I-RN-Menor-U13-Femenino.xlsx and x35VuwPg8YEG-I-RN-Menor-U13-Femenino.xlsx); using x35VuwPg8YEG-I-RN-Menor-U13-Femenino.xlsx."
+ ]
 }
