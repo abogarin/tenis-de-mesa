@@ -58,6 +58,36 @@ def rank_by_points(rows):
     return rows
 
 
+def mark_movement_block(rows):
+    """Some files append the players moving to this division next stage after the ranking, with
+    positions restarting at 1 (Open A: 'Ascenso'). Keep them after the ranking, sharing the next
+    position, flagged 'asc' (or 'desc'), instead of duplicating positions 1, 2, 3…"""
+    start = next((i for i in range(1, len(rows)) if rows[i][0] is not None and rows[i - 1][0] is not None
+                  and rows[i][0] == 1 and rows[i - 1][0] > 1), None)
+    if start is None:
+        return rows
+    block = rows[start:]
+    nxt = max(r[0] for r in rows[:start]) + 1
+    kind = "desc" if any(r[5] == "DESC" for r in block) else "asc"
+    for r in block:
+        r[0], r[5] = nxt, kind
+    return rows
+
+
+def rerank_by_order(rows):
+    """Renumber 1..n following the existing ranks (ties keep sharing a position)."""
+    rows.sort(key=lambda r: r[0])
+    prev, out = None, []
+    for i, r in enumerate(rows):
+        orig = r[0]
+        r[0] = rows[i - 1][0] if i and orig == prev else i + 1
+        prev = orig
+    return rows
+
+
+MAYOR_DIVS = ["Primera", "Segunda", "Tercera", "Cuarta", "Quinta", "Sexta"]
+
+
 def table_from_sheet(ws):
     """Return {sub_division_or_None: rows}. A 'Categoría' column (e.g. PTT classes) splits the table."""
     rows = list(ws.iter_rows(values_only=True))
@@ -90,7 +120,21 @@ def table_from_sheet(ws):
             sub = None
             if iG is not None and len(r2) > iG and r2[iG] is not None and str(r2[iG]).strip():
                 sub = re.sub(r"\s+", "", str(r2[iG]).strip().upper())
-            groups.setdefault(sub, []).append([rank, carne, name, club, round(float(pts), 2) if pts % 1 else int(pts)])
+            note = " ".join(fold(c) for c in r2 if isinstance(c, str))
+            groups.setdefault(sub, []).append([rank, carne, name, club, round(float(pts), 2) if pts % 1 else int(pts),
+                                               "DESC" if "DESCIEND" in note else "ASC" if "ASCEN" in note else ""])
+        for out in groups.values():
+            mark_movement_block(out)
+        for out in groups.values():
+            for x in out:
+                if x[5] not in ("asc", "desc"):
+                    x.pop()  # plain rows stay [rank, carne, name, club, points]
+        if groups and len(groups) > 1 and iR is not None and all(x[0] is not None for g in groups.values() for x in g):
+            # Overall ranking with a division column (Liga Mayor: Primera…Sexta): one ranking per division,
+            # keeping the federation's order and re-numbering within the division.
+            for out in groups.values():
+                rerank_by_order(out)
+            return groups
         if groups:
             for k, out in groups.items():
                 # ranks missing, or a category column (ranks would span classes): rank by points
@@ -262,7 +306,7 @@ def metadata(path, wb, warnings):
         gender = "F"
         division = division if (division or "").startswith("Open") else "Open"
     if not gender:
-        gender = "M" if circuit == "Liga Mayor" else "X"
+        gender = "X"  # Liga Mayor, Master and PTT are mixed
     if circuit == "Open Femenino" and division == "Open":
         warnings.append(f"{path.name}: women's file without division A/B (Primera/Segunda); filed as 'Open'. "
                         f"Add {path.name}.json with {{\"division\": \"Open A\"}} or \"Open B\" to fix.")
@@ -280,6 +324,53 @@ def metadata(path, wb, warnings):
 
 def stage_id(d):
     return f"{d['season']}__{slug(d['circuit'])}__{slug(d['division'])}-{d['gender']}__e{d['stage']}"
+
+
+def mayor_thresholds():
+    """Minimum points for each Liga Mayor division, from sources.json ("ligaMayorDivisions")."""
+    default = {"Primera": 1900, "Segunda": 1700, "Tercera": 1500, "Cuarta": 1300, "Quinta": 1100, "Sexta": 0}
+    try:
+        cfg = json.loads((ROOT / "sources.json").read_text(encoding="utf-8")).get("ligaMayorDivisions")
+        return {k: float(cfg[k]) for k in MAYOR_DIVS} if cfg else default
+    except Exception:  # noqa: BLE001
+        return default
+
+
+def infer_mayor_divisions(built, warnings):
+    """Liga Mayor has six rankings (Primera…Sexta). When a stage file is one overall list with no
+    division column, each player's division is set by their points (thresholds in sources.json).
+    Players may play one division up: if, in the nearest stage of the same season whose file
+    does list divisions, a player was exactly one division above their points division, they are
+    kept there. Marked so the site can say so."""
+    limits = sorted(mayor_thresholds().items(), key=lambda kv: -kv[1])
+    def by_points(p):
+        return next((name for name, low in limits if p >= low), limits[-1][0])
+
+    known = {}  # season -> stage -> {carne: division}
+    for d, _ in built.values():
+        if d["circuit"] == "Liga Mayor" and d["division"] in MAYOR_DIVS and not d.get("divisionBy"):
+            known.setdefault(d["season"], {}).setdefault(d["stage"], {}).update({r[1]: (d["division"], r[4]) for r in d["rows"]})
+
+    for sid in [x for x, (d, _) in built.items() if d["circuit"] == "Liga Mayor" and d["division"] not in MAYOR_DIVS]:
+        d, f = built.pop(sid)
+        ks = known.get(d["season"], {})
+        ref = min(ks, key=lambda st: (abs(st - d["stage"]), st > d["stage"])) if ks else None
+        parts, up = {}, 0
+        for r in sorted(d["rows"], key=lambda r: r[0]):
+            div = by_points(r[4])
+            prev = ks[ref].get(r[1]) if ref else None
+            if prev:
+                prev_div, prev_pts = prev
+                played_up = MAYOR_DIVS.index(prev_div) == MAYOR_DIVS.index(by_points(prev_pts)) - 1
+                if played_up and MAYOR_DIVS.index(prev_div) == MAYOR_DIVS.index(div) - 1:
+                    div, up = prev_div, up + 1  # was playing one division up there: keep them up
+            parts.setdefault(div, []).append(list(r))
+        for div, rows in parts.items():
+            nd = dict(d, division=div, rows=rerank_by_order(rows), divisionBy="points", playUpFrom=ref)
+            built[stage_id(nd)] = (nd, f)
+        rule = ", ".join(f"{n} {int(v)}+" for n, v in limits)
+        warnings.append(f"Liga Mayor {d['season']} stage {d['stage']}: the file has no division column; divisions by points ({rule})"
+                        + (f"; {up} player(s) kept one division up as in stage {ref}." if ref else "."))
 
 
 def main():
@@ -307,6 +398,8 @@ def main():
             d = dict(meta)
             if sheet:  # several divisions in one workbook, e.g. Master age brackets or PTT classes
                 d["division"] = text_division(fold(sheet)) or re.sub(r"(?i)^\s*ranking\s*", "", sheet).replace(" ", "").strip() or d["division"]
+                if d["circuit"] == "Liga Mayor":
+                    d["division"] = re.sub(r"\s+", " ", sheet).strip().title()
                 for circ in ("Master", "PTT"):
                     if d["circuit"] == circ and not d["division"].startswith(circ):
                         d["division"] = f"{circ} {d['division']}"
@@ -334,6 +427,8 @@ def main():
             for p in (path, path.with_name(path.name + ".json"), path.with_name(path.name + ".hint.json")):
                 if p.exists():
                     shutil.move(str(p), dest / p.name)
+
+    infer_mayor_divisions(built, warnings)
 
     for f in STAGES.glob("*.json"):
         f.unlink()
