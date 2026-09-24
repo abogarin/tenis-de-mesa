@@ -226,7 +226,7 @@ footer.src a{color:inherit}
     <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
     <button class="tab" role="tab" id="tab-player" aria-selected="false" data-tab="player">Jugador</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Comparar</button>
-    <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs">Clubes</button>
+    <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs" hidden>Clubes</button>
     <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages" hidden>Historial de etapas</button>
   </div>
 
@@ -464,8 +464,9 @@ function nextCategory(season,carne,gender){
   if(prev===cur)return {text:MENOR_ORDER[cur+1],up:true,title:`Estimado: ya estaba en ${MENOR_ORDER[cur]} en ${season-1}, segundo año`};
   return {text:'—',title:'Sin datos suficientes'};
 }
+const SHOW_NEXT_CATEGORY=false;   // "Categoría del próximo año" column for Liga Menor (hidden for now)
 function extraMode(sel){
-  const m=sel.some(x=>x.d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(x.d.division)),n=sel.some(x=>x.d.circuit==='Liga Menor');
+  const m=sel.some(x=>x.d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(x.d.division)),n=SHOW_NEXT_CATEGORY&&sel.some(x=>x.d.circuit==='Liga Menor');
   if(!m&&!n)return null;
   const season=sel[0]?.d.season;
   return {label:m&&n?'Próximo paso':m?'Ascenso':`Categoría ${season+1}`,
@@ -478,7 +479,7 @@ function extraInfo(d,r){
     const next=MAYOR_DIVS[i-1],need=Math.round((MAYOR_MIN[next]-r[4])*100)/100;
     return need<=0?{text:`Alcanza ${next}`,up:true,title:`Tiene los puntos de ${next} (${MAYOR_MIN[next]}+)`}:{text:`Faltan ${need} para ${next}`,title:`${next}: desde ${MAYOR_MIN[next]} puntos`};
   }
-  if(d.circuit==='Liga Menor')return nextCategory(d.season,r[1],d.gender);
+  if(d.circuit==='Liga Menor'&&SHOW_NEXT_CATEGORY)return nextCategory(d.season,r[1],d.gender);
   return null;
 }
 const extraCell=(d,r)=>{const x=extraInfo(d,r);if(!x)return '<td></td>';return `<td title="${esc(x.title||'')}">${x.up?'<b class="nextup">'+esc(x.text)+'</b>':esc(x.text)}${x.up&&d.circuit==='Liga Menor'?' <small class="club">sube</small>':''}${x.stay?' <small class="club">sigue</small>':''}</td>`};
