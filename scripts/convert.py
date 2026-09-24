@@ -88,7 +88,7 @@ def rerank_by_order(rows):
 MAYOR_DIVS = ["Primera", "Segunda", "Tercera", "Cuarta", "Quinta", "Sexta"]
 
 
-AGE_BRACKET = re.compile(r"^\s*(\d{2}\s*-\s*\d{2}|\d{2}\s*\+|\+\s*\d{2})\s*$")
+AGE_BRACKET = re.compile(r"^\s*(\d{2}\s*-\s*\d{2}|\d{2}\s*\+|\+\s*\d{2}|(?:U|SUB)\s*-?\s*\d{1,2})\s*$", re.I)
 SECTION = re.compile(r"CATEGOR(?:I|Í)A\s*[:\-]?\s*(\S.*)$", re.I)
 
 
@@ -193,7 +193,7 @@ def read_tables(wb):
 # ---------- metadata ----------
 
 def text_division(t):
-    m = re.search(r"\b(?:U|SUB)\s?-?\s?(\d{1,2})\b", t)
+    m = re.search(r"(?<![A-Z0-9])(?:U|SUB)\s?-?\s?(\d{1,2})(?!\d)", t)
     if m:
         return f"U{m.group(1)}"
     if re.search(r"\bPTT\b|PARA\s*TENIS|PARALIMP", t):        # before Master: one PTT label says "Master PTT"
@@ -232,9 +232,9 @@ def bracket_like(sheet_name):
 
 
 def text_gender(t):
-    if re.search(r"\bFEM|FEMENINO|DAMAS|MUJER", t):
+    if re.search(r"(?<![A-Z])FEM|FEMENINO|DAMAS|MUJER", t):
         return "F"
-    if re.search(r"\bMASC|MASCULINO|VARON|CABALLERO", t):
+    if re.search(r"(?<![A-Z])MASC|MASCULINO|VARON|CABALLERO", t):
         return "M"
     return None
 
@@ -267,6 +267,9 @@ def text_stage(name):
     for t in toks:
         if t in ORD_WORDS:
             return ORD_WORDS[t]
+    m = re.search(r"(?:^|[^IVX])([IVX]{1,4})RN", fold(name))   # "U13-Masculino-IIIRN-menor", "U13MascVRNmenor"
+    if m and m.group(1) in ROMAN:
+        return ROMAN[m.group(1)]
     m = re.search(r"(\d)\s*(?:ER|DO|TO|RO|CER)?\s*(?:RANKING|ETAPA|FECHA|RN)", fold(name))
     return int(m.group(1)) if m else None
 
@@ -426,6 +429,7 @@ def main():
     archived = sorted(p for p in ARCHIVE.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
     incoming = sorted(p for p in INBOX.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
     built = {}  # stage id -> (doc, file)
+    undated = []  # files with no stage in the name: accepted only if identical to another file
     for path in archived + incoming:
         is_new = path in incoming
         try:
@@ -452,6 +456,9 @@ def main():
                     if d["circuit"] == circ and not d["division"].startswith(circ):
                         d["division"] = f"{circ} {d['division']}"
             missing = [k for k in ("circuit", "division", "stage") if not d.get(k)]
+            if missing == ["stage"]:
+                undated.append((path, sheet, d, rows, is_new))
+                continue
             if missing:
                 errors.append(f"{path.relative_to(ROOT)}{' / ' + sheet if sheet else ''}: could not detect {', '.join(missing)}. "
                               f"Add {path.name}.json next to it, e.g. {{\"stage\": 2, \"division\": \"U13\", \"gender\": \"F\"}}")
@@ -476,6 +483,23 @@ def main():
             for p in (path, path.with_name(path.name + ".json"), path.with_name(path.name + ".hint.json")):
                 if p.exists():
                     shutil.move(str(p), dest / p.name)
+
+    # A file with no stage in its name is usually a second download of a stage we already have
+    # (e.g. "U13-Masculino.xlsx" = "U13-Masculino-IIRN-menor.xlsx"). Skip exact copies.
+    for path, sheet, d, rows, is_new in undated:
+        same = lambda r: {x[1]: x[4] for x in r}
+        twin = next((f for sid, (b, f) in built.items() if b["season"] == d["season"] and b["circuit"] == d["circuit"]
+                     and b["division"] == d["division"] and b["gender"] == d["gender"] and same(b["rows"]) == same(rows)), None)
+        if twin:
+            warnings.append(f"{path.name}: no stage in the name, but identical to {twin}; skipped as a duplicate.")
+            if is_new:
+                dest = ARCHIVE / str(d["season"])
+                dest.mkdir(parents=True, exist_ok=True)
+                if path.exists():
+                    shutil.move(str(path), dest / path.name)
+        else:
+            errors.append(f"{path.relative_to(ROOT)}: could not detect the stage. Rename it with the stage (e.g. "
+                          f"II-{path.name}) or add {path.name}.json next to it with {{\"stage\": 2}}")
 
     infer_mayor_divisions(built, warnings)
 
