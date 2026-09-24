@@ -1,9 +1,8 @@
 {
  "warnings": [
-  "I-Open-Fem-I-Categoria.xlsx: women's file without division A/B (Primera/Segunda); filed as 'Open'. Add I-Open-Fem-I-Categoria.xlsx.json with {\"division\": \"Open A\"} or \"Open B\" to fix.",
-  "I-Open-Fem-II-Categoria-1.xlsx: women's file without division A/B (Primera/Segunda); filed as 'Open'. Add I-Open-Fem-II-Categoria-1.xlsx.json with {\"division\": \"Open A\"} or \"Open B\" to fix.",
-  "2025__open-femenino__open-F__e1: found in two files (I-Open-Fem-I-Categoria.xlsx and I-Open-Fem-II-Categoria-1.xlsx); using I-Open-Fem-II-Categoria-1.xlsx.",
-  "2025__open-femenino__open-a-F__e5: found in two files (V-Open-Fem-A-Tabulado.xlsx and V-Open-Fem-B-Tabulado.xlsx); using V-Open-Fem-B-Tabulado.xlsx.",
+  "2025__master__master-40-49-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-40-49.xlsx); using IV-Ranking-Master-40-49.xlsx.",
+  "2025__master__master-50-59-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-50-59.xlsx); using IV-Ranking-Master-50-59.xlsx.",
+  "2025__master__master-60-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-60.xlsx); using IV-Ranking-Master-60.xlsx.",
   "2026__liga-menor__u13-M__e3: found in two files (III-Liga-Menor-U13-Masculino.xlsx and RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx); using RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx.",
   "2026__liga-menor__u13-M__e4: found in two files (IV-RN-Menor-U13-MASC.xlsx and v8gBygCZAW6X-IV-RN-Menor-U13-MASC.xlsx); using v8gBygCZAW6X-IV-RN-Menor-U13-MASC.xlsx.",
   "2026__liga-menor__u13-F__e1: found in two files (JYypUoRl7YwT-I-RN-Menor-U13-Femenino.xlsx and x35VuwPg8YEG-I-RN-Menor-U13-Femenino.xlsx); using x35VuwPg8YEG-I-RN-Menor-U13-Femenino.xlsx.",
