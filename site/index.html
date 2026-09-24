@@ -146,6 +146,40 @@ tbody tr.row:hover td{background:var(--surface-2)}
 footer.src{max-width:1180px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px}
 footer.src a{color:inherit}
 @media(min-width:700px){footer.src{padding-inline:32px}}
+/* Player tab */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}
+.pbar{display:grid;grid-template-columns:minmax(0,2fr) minmax(120px,160px);gap:10px;align-items:end;margin-bottom:14px}
+@media(max-width:560px){.pbar{grid-template-columns:1fr}}
+.psearch{position:relative}
+.sugg{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:320px;overflow-y:auto}
+.sugg button{display:flex;width:100%;text-align:left;gap:10px;justify-content:space-between;background:none;border:0;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.sugg button:last-child{border-bottom:0}
+.sugg button:hover,.sugg button:focus-visible,.sugg button.act{background:var(--surface-2)}
+.sugg small{color:var(--muted)}
+.phead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:6px 0 14px}
+.phead h2{font-family:var(--display);font-size:32px;line-height:1;margin:0}
+.phead .meta{color:var(--muted)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 10px}
+.pctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.pctl .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin-right:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 6px;font-size:13px;color:var(--text)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:16px;height:2px;border-radius:1px}
+.pchart{position:relative}
+.pchart svg{display:block;width:100%;height:auto;overflow:visible}
+.ptip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.14);min-width:170px;z-index:5}
+.ptip .h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:4px}
+.ptip .r{display:flex;align-items:center;gap:8px;white-space:nowrap;line-height:1.6}
+.ptip .r i{width:12px;height:2px;border-radius:1px;flex:none}
+.ptip .r b{font-variant-numeric:tabular-nums;min-width:52px}
+.ptip .r span{color:var(--muted)}
+.inactive{margin-top:10px;font-size:13px;color:var(--muted)}
+.ptable{margin-top:16px}
+.ptable table{min-width:520px}
+.ptable td.num small{color:var(--muted)}
+.pempty{padding:34px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
 </style>
 </head>
 <body>
@@ -163,6 +197,7 @@ footer.src a{color:inherit}
 <main class="wrap">
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
+    <button class="tab" role="tab" id="tab-player" aria-selected="false" data-tab="player">Jugador</button>
     <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages">Historial de etapas</button>
   </div>
 
@@ -186,6 +221,17 @@ footer.src a{color:inherit}
     </div>
     <div class="more" id="more" hidden><button class="btn" id="moreBtn">Mostrar más</button></div>
     <p class="note"><span id="updated"></span> Mov. compara con la etapa anterior de la misma categoría; en la primera etapa del año, con el cierre de la temporada anterior. Toque a un atleta para ver su historial completo.</p>
+  </section>
+
+  <section id="view-player" hidden>
+    <div class="pbar">
+      <div class="f psearch"><label for="pq">Jugador</label>
+        <input id="pq" type="search" autocomplete="off" placeholder="Escriba nombre o carné" aria-autocomplete="list" aria-controls="psugg">
+        <div class="sugg" id="psugg" role="listbox" hidden></div>
+      </div>
+      <div class="f"><label for="pseason">Temporada</label><select id="pseason"></select></div>
+    </div>
+    <div id="pbody"><div class="pempty">Busque un jugador para ver su evolución en todos los rankings donde compite.</div></div>
   </section>
 
   <section id="view-stages" hidden>
@@ -389,6 +435,7 @@ function openAthlete(carne){
     <div class="eyebrow" style="color:var(--muted)">${carne.startsWith('n-')?'Sin carné':'Carné '+esc(carne)}</div>
     <h2>${esc(titleCase(r0[2]))}</h2>
     <div class="meta">${esc(clubName(r0[3]))} · ${esc(groupLabel(latest))} · ${esc(latest.circuit)}</div>
+    <button class="btn sm" id="toPlayer" data-carne="${esc(carne)}" style="margin-top:10px">Ver todos sus rankings ${latest.season} →</button>
     <div class="cards">
       <div class="card"><b>${r0[0]}<small style="font-size:14px;color:var(--muted)"> / ${latest.rows.length}</small></b><span>Posición actual</span></div>
       <div class="card"><b>${r0[4]}</b><span>Puntos</span></div>
@@ -436,16 +483,188 @@ $('#tbody').addEventListener('click',e=>{const tr=e.target.closest('tr.row');if(
 $('#tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)}});
 $('#moreBtn').addEventListener('click',()=>{limit+=500;render()});
 $('#scrim').addEventListener('click',closeDrawer);
-$('#drawer').addEventListener('click',e=>{if(e.target.id==='xbtn')closeDrawer()});
+$('#drawer').addEventListener('click',e=>{if(e.target.id==='xbtn')closeDrawer();const tp=e.target.closest('#toPlayer');if(tp){closeDrawer();showTab('player');P.season=null;const a=athletes.find(x=>x.carne===tp.dataset.carne);P.season=a?Math.max(...a.seasons):P.season;$('#pseason').value=String(P.season);selectPlayer(tp.dataset.carne);window.scrollTo(0,0)}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x===t)));
-  $('#view-rank').hidden=t.dataset.tab!=='rank';$('#view-stages').hidden=t.dataset.tab!=='stages';}));
+/* ---------- Player tab: one line per ranking the player competes in ---------- */
+const P={carne:null,season:null,metric:'pos'};
+let athletes=[];   // [{carne,name,fold,club,seasons:Set}]
+function buildAthletes(){
+  const m=new Map();
+  for(const d of docs)for(const r of d.rows){
+    let a=m.get(r[1]);
+    if(!a){a={carne:r[1],name:r[2],club:r[3],seasons:new Set(),n:0,lastSeason:0};m.set(r[1],a)}
+    a.seasons.add(d.season);a.n++;
+    if(d.season>=a.lastSeason){a.lastSeason=d.season;a.name=r[2];a.club=r[3]}
+  }
+  athletes=[...m.values()].map(a=>({...a,f:fold(a.name)}));
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  $('#pseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(!P.season)P.season=seasons[0];
+  $('#pseason').value=String(P.season);
+}
+// Liga Mayor and Open Femenino stay one line even when the player changes division.
+const seriesKey=d=>DIVIDED.has(d.circuit)?d.circuit+'|'+d.gender:catKey(d);
+const seriesName=d=>d.circuit==='Liga Mayor'?'Liga Mayor':d.circuit==='Open Femenino'?'Open Femenino':d.circuit==='Liga Menor'?d.division+(d.gender==='F'?' Fem':' Masc'):d.division;
+const seriesOrder=d=>circRank(d.circuit)*1000+(DIVIDED.has(d.circuit)?0:divRank(d.division));
+function activeCount(d){if(d._active==null)d._active=d._base==null?d.rows.length:d.rows.filter(r=>r[4]!==d._base).length;return d._active}
+function playerSeries(carne,season){
+  const S=new Map(),inactive=new Map();
+  for(const d of docs){
+    if(d.season!==season)continue;
+    const r=d._map.get(carne);if(!r)continue;
+    const k=seriesKey(d);
+    if(d._base!=null&&r[4]===d._base){if(!S.has(k))inactive.set(k,seriesName(d));continue}
+    inactive.delete(k);
+    if(!S.has(k))S.set(k,{key:k,name:seriesName(d),order:seriesOrder(d),circuit:d.circuit,pts:[]});
+    const n=activeCount(d);
+    S.get(k).pts.push({stage:d.stage,rank:r[0],n,pct:Math.max(1,Math.round(100*r[0]/n)),points:r[4],division:d.division,club:r[3],flag:r[5]});
+  }
+  const list=[...S.values()].sort((a,b)=>a.order-b.order);
+  list.forEach((s,i)=>{s.color=`var(--s${(i%8)+1})`;s.pts.sort((a,b)=>a.stage-b.stage)});
+  for(const s of list)inactive.delete(s.key);
+  return {list,inactive:[...inactive.values()]};
+}
+function showSugg(){
+  const q=fold($('#pq').value).trim(),box=$('#psugg');
+  if(q.length<2){box.hidden=true;return}
+  const hits=athletes.filter(a=>a.f.includes(q)||a.carne.startsWith(q)).sort((a,b)=>(b.f.startsWith(q)-a.f.startsWith(q))||b.n-a.n).slice(0,8);
+  box.innerHTML='';
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){
+    const b=document.createElement('button');b.type='button';b.setAttribute('role','option');b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=titleCase(a.name);
+    const s=document.createElement('small');s.textContent=`${clubName(a.club)} · ${a.carne.startsWith('n-')?'sin carné':'carné '+a.carne}`;
+    b.append(l,s);box.append(b);
+  }
+  box.hidden=false;
+}
+function selectPlayer(carne,push=true){
+  P.carne=carne;$('#psugg').hidden=true;
+  const a=athletes.find(x=>x.carne===carne);
+  if(a){$('#pq').value=titleCase(a.name);if(!a.seasons.has(+P.season)){P.season=Math.max(...a.seasons);$('#pseason').value=String(P.season)}}
+  if(push)try{history.replaceState(null,'','#j'+encodeURIComponent(carne))}catch(e){}
+  renderPlayer();
+}
+function renderPlayer(){
+  const body=$('#pbody');
+  if(!P.carne){body.innerHTML='<div class="pempty">Busque un jugador para ver su evolución en todos los rankings donde compite.</div>';return}
+  const a=athletes.find(x=>x.carne===P.carne);
+  const {list,inactive}=playerSeries(P.carne,+P.season);
+  const stages=[...new Set(docs.filter(d=>d.season===+P.season).map(d=>d.stage))].sort((x,y)=>x-y);
+  let h=`<div class="phead"><h2>${esc(titleCase(a?a.name:''))}</h2><span class="meta">${esc(clubName(a?a.club:''))}${P.carne.startsWith('n-')?'':' · carné '+esc(P.carne)}</span></div>`;
+  if(!list.length){
+    body.innerHTML=h+`<div class="pempty">Sin resultados en ${P.season}${inactive.length?` (aparece en ${esc(inactive.join(', '))} solo con el puntaje base)`:''}.</div>`;return;
+  }
+  h+=`<div class="pcard">
+    <div class="pctl"><span class="lbl">Mostrar</span>
+      <button class="chip" data-metric="pos" aria-pressed="${P.metric==='pos'}">Posición</button>
+      <button class="chip" data-metric="pct" aria-pressed="${P.metric==='pct'}">Percentil</button>
+      <span class="summary">${list.length} ranking${list.length===1?'':'s'} en ${P.season}</span></div>
+    ${list.length>1?`<div class="legend">${list.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''}
+    <div class="pchart" id="pchart"></div>
+    <p class="pct" style="margin:6px 0 0">${P.metric==='pos'?'Posición en cada ranking (escala logarítmica: más arriba = mejor).':'Percentil dentro de cada ranking, entre los jugadores con resultados (más arriba = mejor). Permite comparar rankings de distinto tamaño.'} Liga Mayor y Open Femenino se muestran como una sola línea aunque el jugador cambie de división.</p>
+    ${inactive.length?`<div class="inactive">También inscrito, sin resultados (solo puntaje base): ${esc(inactive.join(', '))}.</div>`:''}
+  </div>`;
+  // table view
+  h+=`<div class="tblwrap ptable"><table><thead><tr><th>Ranking</th>${stages.map(s=>`<th class="num">Etapa ${ROMAN[s]||s}</th>`).join('')}</tr></thead><tbody>`+
+    list.map(s=>`<tr><td><span style="display:inline-block;width:12px;height:2px;background:${s.color};vertical-align:middle;margin-right:8px"></span>${esc(s.name)}</td>`+
+      stages.map(st=>{const p=s.pts.find(x=>x.stage===st);return `<td class="num">${p?`<b>${p.rank}</b> <small>/ ${p.n}</small><br><small>${p.points} pts${DIVIDED.has(s.circuit)?' · '+esc(p.division.replace(/^Open /,'')):''}</small>`:'<small>—</small>'}</td>`}).join('')+'</tr>').join('')+
+    `</tbody></table></div>`;
+  body.innerHTML=h;
+  drawPlayerChart(list,stages);
+}
+function drawPlayerChart(list,stages){
+  const host=$('#pchart');if(!host)return;
+  const W=Math.max(300,host.clientWidth||600),H=W<520?260:320,L=52,R=W<520?16:110,T=16,B=34;
+  const iw=W-L-R,ih=H-T-B;
+  const x=st=>L+(stages.length===1?iw/2:(stages.indexOf(st))*iw/(stages.length-1));
+  const pos=P.metric==='pos';
+  const val=p=>pos?p.rank:p.pct;
+  const all=list.flatMap(s=>s.pts.map(val));
+  let y,ticks,fmt;
+  if(pos){
+    const hi=Math.max(2,Math.max(...all)*1.25),lo=1;
+    const l0=Math.log(lo),l1=Math.log(hi);
+    y=v=>T+(Math.log(v)-l0)/(l1-l0)*ih;
+    ticks=[1,2,3,5,10,20,50,100,200,500,1000,2000,5000].filter(t=>t<=hi);fmt=t=>'#'+t;
+  }else{
+    y=v=>T+(v-1)/99*ih;ticks=[1,25,50,75,100];fmt=t=>'Top '+t+'%';
+  }
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Evolución por etapa en cada ranking');
+  const el=(tag,attrs,parent=svg)=>{const e=document.createElementNS(ns,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent.append(e);return e};
+  for(const t of ticks){
+    el('line',{x1:L,x2:W-R,y1:y(t),y2:y(t),stroke:'var(--line)','stroke-width':1});
+    const tx=el('text',{x:L-8,y:y(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'});tx.textContent=fmt(t);
+  }
+  for(const st of stages){const tx=el('text',{x:x(st),y:H-10,'text-anchor':'middle','font-size':11,fill:'var(--muted)'});tx.textContent='Etapa '+(ROMAN[st]||st)}
+  const cross=el('line',{x1:0,x2:0,y1:T,y2:T+ih,stroke:'var(--muted)','stroke-width':1,'stroke-dasharray':'3 3',opacity:0});
+  for(const s of list){
+    // break the line where a stage is missing
+    let d='',prev=null;
+    for(const p of s.pts){const cmd=(prev!=null&&stages.indexOf(p.stage)===stages.indexOf(prev)+1)?'L':'M';d+=`${cmd}${x(p.stage).toFixed(1)},${y(val(p)).toFixed(1)}`;prev=p.stage}
+    el('path',{d,fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'});
+    for(const p of s.pts)el('circle',{cx:x(p.stage),cy:y(val(p)),r:4.5,fill:s.color,stroke:'var(--surface)','stroke-width':2});
+  }
+  // direct labels at each line's last point (wide screens, up to 4 lines), nudged apart
+  if(R>60&&list.length<=4){
+    const labs=list.map(s=>{const p=s.pts[s.pts.length-1];return {s,p,y:y(val(p))}}).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<labs.length;i++)if(labs[i].y-labs[i-1].y<14)labs[i].y=labs[i-1].y+14;
+    for(const l of labs){const tx=el('text',{x:x(l.p.stage)+10,y:l.y+4,'font-size':12,'font-weight':600,fill:'var(--text)'});tx.textContent=l.s.name}
+  }
+  const hit=el('rect',{x:L,y:T,width:iw,height:ih,fill:'transparent'});
+  host.innerHTML='';host.append(svg);
+  const tip=document.createElement('div');tip.className='ptip';tip.hidden=true;host.append(tip);
+  const nearest=cx=>stages.reduce((b,st)=>Math.abs(x(st)-cx)<Math.abs(x(b)-cx)?st:b,stages[0]);
+  const show=st=>{
+    cross.setAttribute('x1',x(st));cross.setAttribute('x2',x(st));cross.setAttribute('opacity',1);
+    tip.innerHTML='';const hd=document.createElement('div');hd.className='h';hd.textContent='Etapa '+(ROMAN[st]||st)+' · '+P.season;tip.append(hd);
+    for(const s of list){
+      const p=s.pts.find(q=>q.stage===st);
+      const row=document.createElement('div');row.className='r';
+      const i=document.createElement('i');i.style.background=s.color;
+      const b=document.createElement('b');b.textContent=p?(pos?`#${p.rank} / ${p.n}`:`Top ${p.pct}%`):'—';
+      const n=document.createElement('span');n.textContent=s.name+(p&&DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):'')+(p?` · ${p.points} pts`:'');
+      row.append(i,b,n);tip.append(row);
+    }
+    tip.hidden=false;
+    const hr=host.getBoundingClientRect(),px=x(st)/W*hr.width;
+    const tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,px+12+tw>hr.width?px-tw-12:px+12),Math.max(0,hr.width-tw))+'px';tip.style.top='8px';
+  };
+  const hide=()=>{tip.hidden=true;cross.setAttribute('opacity',0)};
+  hit.addEventListener('pointermove',e=>{const r=svg.getBoundingClientRect();show(nearest((e.clientX-r.left)/r.width*W))});
+  hit.addEventListener('pointerleave',hide);
+  svg.setAttribute('tabindex','0');let ki=stages.length-1;
+  svg.addEventListener('focus',()=>show(stages[ki]));svg.addEventListener('blur',hide);
+  svg.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ki=Math.max(0,Math.min(stages.length-1,ki+(e.key==='ArrowRight'?1:-1)));show(stages[ki]);e.preventDefault()}});
+}
+$('#pq').addEventListener('input',showSugg);
+$('#pq').addEventListener('focus',showSugg);
+$('#pq').addEventListener('keydown',e=>{
+  const box=$('#psugg'),items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+  let i=items.findIndex(b=>b.classList.contains('act'));
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[i]?.classList.remove('act');i=e.key==='ArrowDown'?Math.min(items.length-1,i+1):Math.max(0,i-1);items[i].classList.add('act');items[i].scrollIntoView({block:'nearest'})}
+  else if(e.key==='Enter'){e.preventDefault();selectPlayer((items[i]||items[0]).dataset.carne)}
+  else if(e.key==='Escape'){box.hidden=true}
+});
+$('#psugg').addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(b)selectPlayer(b.dataset.carne)});
+document.addEventListener('click',e=>{if(!e.target.closest('.psearch'))$('#psugg').hidden=true});
+$('#pseason').addEventListener('change',e=>{P.season=+e.target.value;renderPlayer()});
+$('#pbody').addEventListener('click',e=>{const b=e.target.closest('[data-metric]');if(b){P.metric=b.dataset.metric;renderPlayer()}});
+let rsT;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(!$('#view-player').hidden&&P.carne)renderPlayer()},150)});
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===name)));
+  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';
+  if(name==='player')renderPlayer();
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
 
 /* Data */
 fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
   docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
-  index();buildFilters();render();renderStages();
+  index();buildFilters();render();renderStages();buildAthletes();
+  const hm=/^#j(.+)$/.exec(location.hash);if(hm){showTab('player');selectPlayer(decodeURIComponent(hm[1]),false)}
   if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
 }).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
 })();
