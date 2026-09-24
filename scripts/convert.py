@@ -88,9 +88,30 @@ def rerank_by_order(rows):
 MAYOR_DIVS = ["Primera", "Segunda", "Tercera", "Cuarta", "Quinta", "Sexta"]
 
 
+AGE_BRACKET = re.compile(r"^\s*(\d{2}\s*-\s*\d{2}|\d{2}\s*\+|\+\s*\d{2})\s*$")
+SECTION = re.compile(r"CATEGOR(?:I|Í)A\s*[:\-]?\s*(\S.*)$", re.I)
+
+
+def norm_sub(v):
+    v = re.sub(r"\s+", "", str(v).strip().upper())
+    return re.sub(r"\bC-(\d)", r"C\1", v)          # PTT classes: "C-3" -> "C3"
+
+
 def table_from_sheet(ws):
-    """Return {sub_division_or_None: rows}. A 'Categoría' column (e.g. PTT classes) splits the table."""
+    """Return {sub_division_or_None: rows}. Sub-divisions come from a 'Categoría' column
+    (Liga Mayor Primera…Sexta, PTT classes, Open-Primera/Segunda) or from section title rows
+    ("CATEGORÍA C1-C2" above each block). Age-bracket values (Master) are ignored: the sheet
+    already is the bracket, and those columns are often auto-filled wrongly (40-49, 40-50, 40-51…)."""
     rows = list(ws.iter_rows(values_only=True))
+
+    def section_of(r):
+        cells = [c for c in r if c is not None and str(c).strip()]
+        if len(cells) == 1 and isinstance(cells[0], str):
+            m = SECTION.search(cells[0].strip())
+            if m:
+                return norm_sub(m.group(1))
+        return None
+
     for h, r in enumerate(rows[:20]):
         hdr = [fold(c).strip() for c in r]
         iN = next((i for i, c in enumerate(hdr) if "NOMBRE" in c or c in ("JUGADOR", "ATLETA")), None)
@@ -101,8 +122,17 @@ def table_from_sheet(ws):
         iC = next((i for i, c in enumerate(hdr) if c.startswith("CARN") or c in ("ID", "CEDULA", "LICENCIA")), None)
         iK = next((i for i, c in enumerate(hdr) if "CLUB" in c or "EQUIPO" in c), None)
         iG = next((i for i, c in enumerate(hdr) if c.startswith("CATEGOR") or c.startswith("CLASE")), None)
+        if iG is not None:
+            vals = [str(x[iG]) for x in rows[h + 1:] if len(x) > iG and x[iG] is not None and str(x[iG]).strip()]
+            if not vals or all(AGE_BRACKET.match(v) for v in vals):
+                iG = None
+        section = next((sec for x in reversed(rows[:h]) if (sec := section_of(x))), None)
         groups = {}
         for r2 in rows[h + 1:]:
+            sec = section_of(r2)
+            if sec:
+                section = sec
+                continue
             if len(r2) <= max(iN, iP):
                 continue
             name, pts = r2[iN], r2[iP]
@@ -117,29 +147,21 @@ def table_from_sheet(ws):
                 carne = "n-" + slug(name)  # no carné column: fall back to the name
             rank = int(r2[iR]) if iR is not None and isinstance(r2[iR], (int, float)) else None
             club = str(r2[iK]).strip() if iK is not None and r2[iK] is not None else ""
-            sub = None
+            sub = section
             if iG is not None and len(r2) > iG and r2[iG] is not None and str(r2[iG]).strip():
-                sub = re.sub(r"\s+", "", str(r2[iG]).strip().upper())
+                sub = norm_sub(r2[iG])
             note = " ".join(fold(c) for c in r2 if isinstance(c, str))
             groups.setdefault(sub, []).append([rank, carne, name, club, round(float(pts), 2) if pts % 1 else int(pts),
                                                "DESC" if "DESCIEND" in note else "ASC" if "ASCEN" in note else ""])
         for out in groups.values():
             mark_movement_block(out)
-        for out in groups.values():
             for x in out:
                 if x[5] not in ("asc", "desc"):
                     x.pop()  # plain rows stay [rank, carne, name, club, points]
-        if groups and len(groups) > 1 and iR is not None and all(x[0] is not None for g in groups.values() for x in g):
-            # Overall ranking with a division column (Liga Mayor: Primera…Sexta): one ranking per division,
-            # keeping the federation's order and re-numbering within the division.
-            for out in groups.values():
-                rerank_by_order(out)
-            return groups
         if groups:
-            for k, out in groups.items():
-                # ranks missing, or a category column (ranks would span classes): rank by points
-                if any(x[0] is None for x in out) or len(groups) > 1:
-                    rank_by_points(out)
+            for out in groups.values():
+                if any(x[0] is None for x in out):
+                    rank_by_points(out)   # no ranking column (e.g. PTT with a class column)
             return groups
     return None
 
@@ -180,7 +202,7 @@ def text_division(t):
         m = re.search(r"\b([3-9]\d)\s*(?:-|\s|A)\s*([3-9]\d)\b", t)
         if m:
             return f"Master {m.group(1)}-{m.group(2)}"
-        m = re.search(r"\b([3-9]\d)\s*\+|\+\s*([3-9]\d)\b|MAS\s*DE\s*([3-9]\d)", t)
+        m = re.search(r"\b([3-9]\d)\s*\+|\+\s*([3-9]\d)\b|MAS\s*DE\s*([3-9]\d)|MASTER\w*\s*-?\s*\b(6\d|7\d)\b(?!\s*-)", t)
         if m:
             return f"Master {next(g for g in m.groups() if g)}+"
         return "Master"
@@ -189,6 +211,9 @@ def text_division(t):
         m = re.search(r"OPEN\s*(?:FEM\w*\s*)?-?\s*\b([AB])\b|FEMENIN\w*\s*\b([AB])\b|\b([AB])\s*$", t)
         if m:
             return "Open " + next(g for g in m.groups() if g)
+        m = re.search(r"\b(I{1,2})\s*CATEGOR", t)   # "I Categoría" = A, "II Categoría" = B
+        if m:
+            return "Open A" if m.group(1) == "I" else "Open B"
         if re.search(r"\bPRIMERA\b", t):
             return "Open A"
         if re.search(r"\bSEGUNDA\b", t):
@@ -336,6 +361,26 @@ def mayor_thresholds():
         return default
 
 
+def combine_open_divisions(meta, tables):
+    """Open Femenino files are one per division (A or B). When such a file also has a category
+    column (Open-Primera / Open-Segunda), that column says where each player goes next stage:
+    keep one ranking and flag the players moving up ('asc') or down ('desc')."""
+    if meta.get("circuit") != "Open Femenino" or meta.get("division") not in ("Open A", "Open B") or len(tables) < 2:
+        return tables
+    divs = [(label, text_division(fold(str(label).replace("-", " "))) if label else None, rows) for label, rows in tables]
+    if not all(d in ("Open A", "Open B") for _, d, _ in divs):
+        return tables
+    merged = []
+    for _, d, rows in divs:
+        for r in rows:
+            r = list(r[:5])
+            if d != meta["division"]:
+                r.append("asc" if d == "Open A" else "desc")
+            merged.append(r)
+    merged.sort(key=lambda r: r[0])
+    return [(None, merged)]
+
+
 def infer_mayor_divisions(built, warnings):
     """Liga Mayor has six rankings (Primera…Sexta). When a stage file is one overall list with no
     division column, each player's division is set by their points (thresholds in sources.json).
@@ -393,8 +438,11 @@ def main():
             errors.append(f"{path.relative_to(ROOT)}: no ranking table found (needs Nombre and Puntos columns)")
             continue
         meta = metadata(path, wb, warnings)
+        tables = combine_open_divisions(meta, tables)
         saved = []
         for sheet, rows in tables:
+            if sheet and len(tables) > 1:
+                rerank_by_order(rows)  # one ranking per division, numbered within the division
             d = dict(meta)
             if sheet:  # several divisions in one workbook, e.g. Master age brackets or PTT classes
                 d["division"] = text_division(fold(sheet)) or re.sub(r"(?i)^\s*ranking\s*", "", sheet).replace(" ", "").strip() or d["division"]
@@ -409,6 +457,7 @@ def main():
                               f"Add {path.name}.json next to it, e.g. {{\"stage\": 2, \"division\": \"U13\", \"gender\": \"F\"}}")
                 continue
             d["stage"] = int(d["stage"])
+            rows.sort(key=lambda r: r[0])
             d.update(sourceFile=path.name, rows=rows)
             sid = stage_id(d)
             if sid in built and built[sid][1] != path.name:
