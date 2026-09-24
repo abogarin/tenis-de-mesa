@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ranking Nacional · Tenis de Mesa Costa Rica</title>
+<meta name="description" content="Ranking nacional de tenis de mesa de Costa Rica por etapa, categoría y club.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2213%22 fill=%22%23E0681A%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#EAEFF6; --text:#14213A; --muted:#5B6880; --line:#D9E0EB;
+  --table:#1B3A6B; --table-ink:#FFFFFF; --ball:#E0681A; --ball-soft:#FCE9DC;
+  --up:#1D7F47; --down:#BE3A3A; --up-soft:#E1F3E8; --down-soft:#F8E3E3;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0C1320; --surface:#131D2E; --surface-2:#1A2740; --text:#E4EAF4; --muted:#8B98B0; --line:#26334C;
+    --table:#23477F; --table-ink:#FFFFFF; --ball:#F08B42; --ball-soft:#3A2618;
+    --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0C1320; --surface:#131D2E; --surface-2:#1A2740; --text:#E4EAF4; --muted:#8B98B0; --line:#26334C;
+  --table:#23477F; --table-ink:#FFFFFF; --ball:#F08B42; --ball-soft:#3A2618;
+  --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+
+/* Header: the table surface with the centre line */
+.hero{background:var(--table);color:var(--table-ink);position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,transparent calc(50% - 1px),rgba(255,255,255,.18) calc(50% - 1px),rgba(255,255,255,.18) calc(50% + 1px),transparent calc(50% + 1px));pointer-events:none}
+.hero::after{content:"";position:absolute;inset:10px;border:2px solid rgba(255,255,255,.22);pointer-events:none}
+.hero-in{position:relative;max-width:1180px;margin:0 auto;padding:28px 32px 24px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:13px;opacity:.8;display:flex;align-items:center;gap:8px}
+.ball{width:10px;height:10px;border-radius:50%;background:var(--ball);display:inline-block}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,54px);line-height:.95;margin:6px 0 0;text-wrap:balance;letter-spacing:.01em}
+.hero-stats{display:flex;gap:28px;flex-wrap:wrap}
+.hs b{display:block;font-family:var(--display);font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.hs span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 60px}
+@media(min-width:700px){.wrap{padding-inline:32px}}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap;align-items:flex-end}
+.tab{background:none;border:0;padding:10px 14px;font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:.03em;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--ball)}
+.tabs .spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ball);border-color:var(--ball);color:#fff}
+.btn.danger{color:var(--down);border-color:var(--down)}
+.btn.sm{padding:4px 10px;font-size:13px}
+
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.f label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:4px;font-weight:600}
+.f input,.f select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.f.search{grid-column:span 2}
+@media(max-width:520px){.f.search{grid-column:1/-1}}
+
+.stagebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.stagebar .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--table);border-color:var(--table);color:var(--table-ink)}
+.summary{color:var(--muted);font-size:13px;margin-left:auto}
+
+.tblwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--surface);position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.grp td{background:var(--surface-2);font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.03em;padding:8px 12px}
+tr.grp td small{font-family:var(--body);font-size:12px;color:var(--muted);font-weight:500;letter-spacing:0;margin-left:10px}
+tbody tr.row{cursor:pointer}
+tbody tr.row:hover td{background:var(--surface-2)}
+.pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
+.pos.top1{color:var(--ball)}
+.name{font-weight:600;white-space:normal;min-width:180px}
+.club{color:var(--muted)}
+.mv{display:inline-block;min-width:44px;text-align:center;border-radius:6px;padding:1px 6px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.mv.up{color:var(--up);background:var(--up-soft)}
+.mv.down{color:var(--down);background:var(--down-soft)}
+.mv.eq{color:var(--muted)}
+.mv.new{color:var(--ball);background:var(--ball-soft)}
+.pts{font-weight:600}
+.dpts{color:var(--up);font-size:13px}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.more{display:flex;justify-content:center;padding:12px}
+
+/* Drawer */
+.scrim{position:fixed;inset:0;background:rgba(8,14,26,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--surface);z-index:21;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.2);padding:calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 30px)}
+.drawer h2{font-family:var(--display);font-size:30px;line-height:1;margin:4px 0 6px;text-wrap:balance}
+.drawer .meta{color:var(--muted);font-size:14px}
+.xbtn{float:right;border:0;background:var(--surface-2);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px}
+.card b{display:block;font-family:var(--display);font-size:26px;line-height:1.05;font-variant-numeric:tabular-nums}
+.card span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.series h3{font-family:var(--display);font-size:19px;margin:22px 0 8px;letter-spacing:.02em}
+.chart{width:100%;height:auto;display:block}
+.hist{width:100%;border-collapse:collapse;min-width:0;margin-top:8px}
+.hist th,.hist td{padding:6px 8px;font-size:14px}
+
+/* Stages tab */
+.stages{display:grid;gap:10px}
+.stg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.stg .t{font-family:var(--display);font-size:19px;font-weight:600}
+.stg .d{color:var(--muted);font-size:13px}
+.stg .act{margin-left:auto;display:flex;gap:6px}
+.tag{display:inline-block;font-size:12px;font-weight:600;border-radius:5px;padding:1px 7px;background:var(--surface-2);color:var(--muted)}
+
+/* Upload panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.panel h3{font-family:var(--display);font-size:22px;margin:0 0 4px}
+.panel p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop.over{border-color:var(--ball);color:var(--text)}
+.uform{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+.msg{font-size:14px;margin-top:10px}
+.msg.err{color:var(--down)}
+.msg.ok{color:var(--up)}
+.note{font-size:13px;color:var(--muted);margin-top:18px}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
+@media(max-width:520px){.hero-in{padding:24px 20px 20px}.hero-stats{display:grid;grid-template-columns:repeat(4,auto);gap:14px;width:100%;justify-content:space-between}.hs b{font-size:24px}.hs span{font-size:10px;letter-spacing:.05em}.cards{grid-template-columns:repeat(3,1fr)}.card b{font-size:22px}}
+
+.seasonsel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.sep{width:1px;height:22px;background:var(--line);margin:0 6px}
+.pct{font-size:12px;color:var(--muted)}
+.career{width:100%;border-collapse:collapse;min-width:0}
+.career th,.career td{padding:6px 8px;font-size:14px}
+.career tr.season td{background:var(--surface-2);font-family:var(--display);font-size:16px;font-weight:600;letter-spacing:.03em}
+.yoy{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0 4px}
+.yoy .card b{font-size:20px;line-height:1.15}
+footer.src{max-width:1180px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px}
+footer.src a{color:inherit}
+@media(min-width:700px){footer.src{padding-inline:32px}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <div>
+      <div class="eyebrow"><span class="ball"></span> Tenis de mesa · Costa Rica</div>
+      <h1>Ranking Nacional</h1>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
+    <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages">Historial de etapas</button>
+  </div>
+
+  <section id="view-rank">
+    <div class="filters">
+      <div class="f search"><label for="fq">Atleta o carné</label><input id="fq" type="search" placeholder="Buscar por nombre o número de carné"></div>
+      <div class="f"><label for="fseason">Temporada</label><select id="fseason"></select></div>
+      <div class="f"><label for="fcircuit">Circuito</label><select id="fcircuit"></select></div>
+      <div class="f"><label for="fdiv">Categoría</label><select id="fdiv"></select></div>
+      <div class="f"><label for="fgender">Género</label><select id="fgender"></select></div>
+      <div class="f"><label for="fclub">Equipo / club</label><select id="fclub"></select></div>
+    </div>
+    <div class="stagebar" id="stagebar"></div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num">+Pts</th><th class="num">Carné</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="7" class="empty">Cargando ranking…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="more" id="more" hidden><button class="btn" id="moreBtn">Mostrar más</button></div>
+    <p class="note"><span id="updated"></span> Mov. compara con la etapa anterior de la misma categoría; en la primera etapa del año, con el cierre de la temporada anterior. Toque a un atleta para ver su historial completo.</p>
+  </section>
+
+  <section id="view-stages" hidden>
+    <div class="stages" id="stagesList"></div>
+  </section>
+</main>
+<footer class="src">Fuente de datos: resultados oficiales publicados por <a href="https://fecoteme.com/ranking-nacional-2026/" rel="noopener">FECOTEME</a>. Sitio no oficial.</footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Detalle del atleta"></aside>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const GENDER={M:'Masculino',F:'Femenino',X:'Mixto'};
+const CIRCUIT_ORDER=['Liga Menor','Liga Mayor','Open Femenino','Master','PTT'];
+const LOWER=new Set(['de','del','la','las','los','y','da','van','von']);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fold=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function titleCase(s){return String(s||'').toLowerCase().split(/\s+/).filter(Boolean).map((w,i)=>i>0&&LOWER.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1)).join(' ')}
+const clubName=c=>{c=String(c||'').trim();return c.length<=1?(c||'—'):titleCase(c).replace(/^Ccdr\b/,'CCDR').replace(/\bCcdr\b/,'CCDR')};
+function divRank(d){const m=/^U(\d+)/.exec(d);if(m)return +m[1];return {'Mayor':50,'Open A':60,'Open B':61,'Open':62,'PTT':90}[d]??(d.startsWith('Master')?70+(parseInt(d.slice(7))||0)/100:80)}
+const circRank=c=>{const i=CIRCUIT_ORDER.indexOf(c);return i<0?99:i};
+const catKey=d=>[d.circuit,d.division,d.gender].join('|');      // same category, any season
+const groupKey=d=>d.season+'|'+catKey(d);                         // one ranking list
+const groupLabel=d=>d.division+(d.gender==='X'||d.circuit==='Open Femenino'?'':' '+(GENDER[d.gender]||d.gender));
+const stageLabel=d=>`Etapa ${ROMAN[d.stage]||d.stage}`;
+const shortStage=d=>`${ROMAN[d.stage]||d.stage}·${String(d.season).slice(2)}`;
+const fmtDate=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:d.toLocaleDateString('es-CR',{day:'numeric',month:'short',year:'numeric'})};
+const topPct=(r,n)=>Math.max(1,Math.round(100*r/n));
+const sortGroups=(a,b)=>b.season-a.season||circRank(a.circuit)-circRank(b.circuit)||divRank(a.division)-divRank(b.division)||a.gender.localeCompare(b.gender);
+
+let docs=[], groups=new Map(), byCat=new Map();
+let F={q:'',season:'',circuit:'',div:'',gender:'',club:'',stage:'latest'};
+let limit=250;
+try{const s=JSON.parse(localStorage.getItem('rn-filters2')||'null');if(s)Object.assign(F,s,{q:''})}catch(e){}
+const saveF=()=>{try{localStorage.setItem('rn-filters2',JSON.stringify({...F,q:''}))}catch(e){}};
+
+function index(){
+  groups=new Map();byCat=new Map();
+  for(const d of docs){
+    d._map=new Map(d.rows.map(r=>[r[1],r]));
+    const k=groupKey(d);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(d);
+    const c=catKey(d);if(!byCat.has(c))byCat.set(c,[]);byCat.get(c).push(d);
+  }
+  for(const arr of byCat.values()){
+    arr.sort((a,b)=>a.season-b.season||a.stage-b.stage);
+    arr.forEach((d,i)=>{d._prev=arr[i-1]||null});   // previous stage, or last stage of the previous season
+  }
+  for(const arr of groups.values())arr.sort((a,b)=>a.stage-b.stage);
+}
+const uniq=fn=>[...new Set(docs.map(fn).filter(v=>v!==''&&v!=null))];
+function fillSelect(el,values,cur,allLabel,labelFn=v=>v){
+  el.innerHTML=(allLabel?`<option value="">${allLabel}</option>`:'')+values.map(v=>`<option value="${esc(v)}">${esc(labelFn(v))}</option>`).join('');
+  const ok=values.map(String).includes(String(cur));
+  el.value=ok?String(cur):(allLabel?'':String(values[0]??''));
+  return el.value;
+}
+function buildFilters(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  F.season=fillSelect($('#fseason'),seasons,F.season||seasons[0],'');
+  const inSeason=docs.filter(d=>String(d.season)===String(F.season));
+  F.circuit=fillSelect($('#fcircuit'),[...new Set(inSeason.map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b)),F.circuit,'Todos');
+  const inCirc=inSeason.filter(d=>!F.circuit||d.circuit===F.circuit);
+  F.div=fillSelect($('#fdiv'),[...new Set(inCirc.map(d=>d.division))].sort((a,b)=>divRank(a)-divRank(b)),F.div,'Todas');
+  F.gender=fillSelect($('#fgender'),[...new Set(inCirc.map(d=>d.gender))].sort(),F.gender,'Todos',v=>GENDER[v]||v);
+  const clubs=new Set();inSeason.forEach(d=>d.rows.forEach(r=>clubs.add(clubName(r[3]))));
+  F.club=fillSelect($('#fclub'),[...clubs].sort((a,b)=>a.localeCompare(b,'es')),F.club,'Todos');
+}
+function visibleGroups(){
+  return [...groups.values()].filter(a=>{const d=a[0];return String(d.season)===String(F.season)&&(!F.circuit||F.circuit===d.circuit)&&(!F.div||F.div===d.division)&&(!F.gender||F.gender===d.gender)})
+    .sort((a,b)=>sortGroups(a[0],b[0]));
+}
+function renderStagebar(vg){
+  const nums=[...new Set(vg.flatMap(a=>a.map(d=>d.stage)))].sort((a,b)=>a-b);
+  if(F.stage!=='latest'&&!nums.includes(+F.stage))F.stage='latest';
+  const chip=(v,l)=>`<button class="chip" data-stage="${v}" aria-pressed="${String(F.stage)===String(v)}">${l}</button>`;
+  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span>`;
+}
+function mvCell(d,r){
+  if(!d._prev)return '<span class="mv eq">–</span>';
+  const p=d._prev._map.get(r[1]);
+  if(!p)return '<span class="mv new">Nuevo</span>';
+  const diff=p[0]-r[0];
+  if(diff>0)return `<span class="mv up">▲ ${diff}</span>`;
+  if(diff<0)return `<span class="mv down">▼ ${-diff}</span>`;
+  return '<span class="mv eq">=</span>';
+}
+function dPts(d,r){if(!d._prev)return '';const p=d._prev._map.get(r[1]);if(!p)return '';const x=Math.round((r[4]-p[4])*100)/100;return x>0?`<span class="dpts">+${x}</span>`:x<0?`<span class="mv down">${x}</span>`:'<span class="club">0</span>'}
+function render(){
+  const vg=visibleGroups();
+  renderStagebar(vg);
+  const q=fold(F.q).trim();
+  let html='',count=0,shown=0;
+  for(const arr of vg){
+    const d=F.stage==='latest'?arr[arr.length-1]:arr.find(x=>x.stage===+F.stage);
+    if(!d)continue;
+    const rows=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&(!F.club||clubName(r[3])===F.club));
+    if(!rows.length)continue;
+    count+=rows.length;
+    if(shown>=limit)continue;
+    const cmp=d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'';
+    html+=`<tr class="grp"><td colspan="7">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${cmp}</small></td></tr>`;
+    for(const r of rows){
+      if(shown>=limit)break;shown++;
+      html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td><td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
+    }
+  }
+  if(!docs.length)html=`<tr><td colspan="7" class="empty">Aún no hay etapas cargadas.</td></tr>`;
+  else if(!count)html=`<tr><td colspan="7" class="empty">Ningún atleta coincide con estos filtros.</td></tr>`;
+  $('#tbody').innerHTML=html;
+  $('#more').hidden=shown>=count;
+  const s=$('#summary');if(s)s.textContent=count?`${count} atleta${count===1?'':'s'}`:'';
+  renderHero();
+}
+function renderHero(){
+  const inS=docs.filter(d=>String(d.season)===String(F.season));
+  const ath=new Set(),clubs=new Set();inS.forEach(d=>d.rows.forEach(r=>{ath.add(r[1]);clubs.add(clubName(r[3]))}));
+  const cats=new Set(inS.map(catKey));
+  $('#heroStats').innerHTML=[[ath.size,'Atletas '+(F.season||'')],[cats.size,'Categorías'],[inS.length,'Etapas'],[clubs.size,'Clubes']]
+    .map(([n,l])=>`<div class="hs"><b>${n}</b><span>${esc(l)}</span></div>`).join('');
+}
+function renderStages(){
+  const sorted=docs.slice().sort((a,b)=>sortGroups(a,b)||b.stage-a.stage);
+  let html='',lastSeason=null;
+  for(const d of sorted){
+    if(d.season!==lastSeason){html+=`<h3 style="font-family:var(--display);font-size:24px;margin:14px 0 2px">Temporada ${d.season}</h3>`;lastSeason=d.season}
+    html+=`<div class="stg"><div><div class="t">${esc(groupLabel(d))} · ${stageLabel(d)}</div>
+      <div class="d">${esc(d.circuit)}${d.date?' · '+fmtDate(d.date):''}</div></div>
+      <span class="tag">${d.rows.length} atletas</span>
+      ${d.sourceFile?`<a class="tag" href="files/${d.season}/${encodeURIComponent(d.sourceFile)}" download>Descargar Excel</a>`:''}
+      ${d.sourceUrl?`<a class="tag" href="${esc(d.sourceUrl)}" rel="noopener">Ver en FECOTEME</a>`:''}</div>`;
+  }
+  $('#stagesList').innerHTML=html||'<div class="empty">Aún no hay etapas cargadas.</div>';
+}
+
+/* Athlete career */
+function openAthlete(carne){
+  const hits=docs.filter(d=>d._map.has(carne)).sort((a,b)=>a.season-b.season||a.stage-b.stage||sortGroups(a,b));
+  if(!hits.length)return;
+  const latest=hits[hits.length-1], r0=latest._map.get(carne);
+  const pts=hits.map(d=>({d,r:d._map.get(carne),n:d.rows.length}));
+  // per season summary (main category = the one with most stages that season)
+  const seasons=[...new Set(hits.map(d=>d.season))];
+  const summ=seasons.map(y=>{
+    const ys=pts.filter(p=>p.d.season===y);
+    const cats={};ys.forEach(p=>{cats[catKey(p.d)]=(cats[catKey(p.d)]||0)+1});
+    const main=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0][0];
+    const ms=ys.filter(p=>catKey(p.d)===main);const last=ms[ms.length-1];
+    return {y,div:last.d.division,cat:groupLabel(last.d),circuit:last.d.circuit,stages:ys.length,final:last,best:Math.min(...ms.map(p=>p.r[0])),bestPct:Math.min(...ms.map(p=>topPct(p.r[0],p.n)))};
+  });
+  let yoy='';
+  if(summ.length>1){
+    const a=summ[summ.length-2],b=summ[summ.length-1];
+    const dp=Math.round((b.final.r[4]-a.final.r[4])*100)/100;
+    const pa=topPct(a.final.r[0],a.final.n),pb=topPct(b.final.r[0],b.final.n);
+    yoy=`<div class="series"><h3>${a.y} → ${b.y}</h3><div class="yoy">
+      <div class="card"><b>${esc(a.div)} → ${esc(b.div)}</b><span>Categoría</span></div>
+      <div class="card"><b style="color:${pb<pa?'var(--up)':pb>pa?'var(--down)':'inherit'}">Top ${pa}% → ${pb}%</b><span>Percentil (cierre / actual)</span></div>
+      <div class="card"><b style="color:${dp>0?'var(--up)':dp<0?'var(--down)':'inherit'}">${dp>0?'+':''}${dp}</b><span>Puntos (${a.final.r[4]} → ${b.final.r[4]})</span></div>
+    </div></div>`;
+  }
+  let rows='',ls=null;
+  for(const p of pts.slice().reverse()){
+    if(p.d.season!==ls){ls=p.d.season;rows+=`<tr class="season"><td colspan="5">Temporada ${ls}</td></tr>`}
+    rows+=`<tr><td>${stageLabel(p.d)} <span class="club">· ${esc(groupLabel(p.d))}</span></td><td class="num">${p.r[0]} <span class="club">/ ${p.n}</span></td><td class="num"><span class="pct">Top ${topPct(p.r[0],p.n)}%</span></td><td class="num">${p.r[4]}</td><td class="club">${esc(clubName(p.r[3]))}</td></tr>`;
+  }
+  const first=pts[0];
+  $('#drawer').innerHTML=`<button class="xbtn" id="xbtn" aria-label="Cerrar">×</button>
+    <div class="eyebrow" style="color:var(--muted)">${carne.startsWith('n-')?'Sin carné':'Carné '+esc(carne)}</div>
+    <h2>${esc(titleCase(r0[2]))}</h2>
+    <div class="meta">${esc(clubName(r0[3]))} · ${esc(groupLabel(latest))} · ${esc(latest.circuit)}</div>
+    <div class="cards">
+      <div class="card"><b>${r0[0]}<small style="font-size:14px;color:var(--muted)"> / ${latest.rows.length}</small></b><span>Posición actual</span></div>
+      <div class="card"><b>${r0[4]}</b><span>Puntos</span></div>
+      <div class="card"><b>Top ${topPct(r0[0],latest.rows.length)}%</b><span>de su categoría</span></div>
+    </div>
+    <div class="series"><h3>Evolución · ${pts.length} etapa${pts.length===1?'':'s'} desde ${stageLabel(first.d)} ${first.d.season}</h3>${chart(pts)}</div>
+    ${yoy}
+    <div class="series"><h3>Historial</h3><div style="overflow-x:auto"><table class="career"><thead><tr><th>Etapa</th><th class="num">Pos.</th><th class="num">Percentil</th><th class="num">Puntos</th><th>Club</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  $('#drawer').hidden=false;$('#scrim').hidden=false;$('#xbtn').focus();
+}
+function closeDrawer(){$('#drawer').hidden=true;$('#scrim').hidden=true}
+function chart(pts){
+  if(pts.length<2)return `<p class="club" style="font-size:13px">Solo hay una etapa registrada; la gráfica aparece desde la segunda.</p>`;
+  // y = percentile (top %), so it stays comparable when the athlete changes category or year
+  const W=460,H=190,L=62,R=20,T=24,B=38;
+  const vals=pts.map(p=>topPct(p.r[0],p.n));
+  let lo=Math.max(0,Math.min(...vals)-5),hi=Math.min(100,Math.max(...vals)+5);if(hi-lo<10){hi=Math.min(100,lo+10)}
+  const x=i=>L+12+i*(W-L-R-24)/(pts.length-1);
+  const y=v=>T+(v-lo)*(H-T-B)/(hi-lo);
+  const ticks=[lo,Math.round((lo+hi)/2),hi];
+  const path=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(vals[i]).toFixed(1)}`).join('');
+  const area=path+`L${x(pts.length-1).toFixed(1)},${H-B}L${x(0).toFixed(1)},${H-B}Z`;
+  let seps='';for(let i=1;i<pts.length;i++)if(pts[i].d.season!==pts[i-1].d.season){const sx=(x(i)+x(i-1))/2;seps+=`<line x1="${sx}" x2="${sx}" y1="${T-12}" y2="${H-B}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1"/><text x="${sx+4}" y="${T-4}" font-size="11" fill="var(--muted)">${pts[i].d.season}</text>`}
+  const every=Math.ceil(pts.length/8);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Percentil por etapa">
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--muted)">Top ${Math.max(1,t)}%</text>`).join('')}
+    ${seps}
+    <path d="${area}" fill="var(--ball)" fill-opacity=".09"/>
+    <path d="${path}" fill="none" stroke="var(--ball)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${pts.map((p,i)=>{const last=i===pts.length-1;const lab=(i%every===0||last);return `<circle cx="${x(i)}" cy="${y(vals[i])}" r="${last?5.5:4}" fill="${last?'var(--ball)':'var(--surface)'}" stroke="var(--ball)" stroke-width="2"/>
+      ${lab?`<text x="${x(i)}" y="${y(vals[i])-10}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text)">#${p.r[0]}</text>
+      <text x="${x(i)}" y="${H-20}" text-anchor="middle" font-size="11" fill="var(--muted)">${shortStage(p.d)}</text>
+      <text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${esc(p.d.division)}</text>`:''}`}).join('')}
+  </svg><p class="pct" style="margin:4px 0 0">Posición relativa dentro de su categoría (más arriba = mejor). Etiquetas: etapa·año y categoría.</p>`;
+}
+
+/* Events */
+$('#fq').addEventListener('input',e=>{F.q=e.target.value;limit=250;render()});
+for(const [id,k] of [['#fseason','season'],['#fcircuit','circuit'],['#fdiv','div'],['#fgender','gender'],['#fclub','club']])
+  $(id).addEventListener('change',e=>{F[k]=e.target.value;if(k==='season'||k==='circuit'){buildFilters()}limit=250;saveF();render()});
+$('#stagebar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b)return;F.stage=b.dataset.stage;saveF();render()});
+$('#tbody').addEventListener('click',e=>{const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)});
+$('#tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)}});
+$('#moreBtn').addEventListener('click',()=>{limit+=500;render()});
+$('#scrim').addEventListener('click',closeDrawer);
+$('#drawer').addEventListener('click',e=>{if(e.target.id==='xbtn')closeDrawer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x===t)));
+  $('#view-rank').hidden=t.dataset.tab!=='rank';$('#view-stages').hidden=t.dataset.tab!=='stages';}));
+
+/* Data */
+fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
+  docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4]])}));
+  index();buildFilters();render();renderStages();
+  if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
+}).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
+})();
+</script>
+</body>
+</html>
