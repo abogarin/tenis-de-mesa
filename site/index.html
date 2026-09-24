@@ -208,11 +208,12 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fold=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function titleCase(s){return String(s||'').toLowerCase().split(/\s+/).filter(Boolean).map((w,i)=>i>0&&LOWER.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1)).join(' ')}
 const clubName=c=>{c=String(c||'').trim();return c.length<=1?(c||'—'):titleCase(c).replace(/^Ccdr\b/,'CCDR').replace(/\bCcdr\b/,'CCDR')};
-function divRank(d){const m=/^U(\d+)/.exec(d);if(m)return +m[1];return {'Mayor':50,'Open A':60,'Open B':61,'Open':62,'PTT':90}[d]??(d.startsWith('Master')?70+(parseInt(d.slice(7))||0)/100:80)}
+const MAYOR_DIVS=['Primera','Segunda','Tercera','Cuarta','Quinta','Sexta'];
+function divRank(d){const m=/^U(\d+)/.exec(d);if(m)return +m[1];const i=MAYOR_DIVS.indexOf(d);if(i>=0)return 40+i;return {'Mayor':50,'Open A':60,'Open B':61,'Open':62}[d]??(d.startsWith('Master')?70+(parseInt(d.slice(7))||0)/100:d.startsWith('PTT')?90:80)}
 const circRank=c=>{const i=CIRCUIT_ORDER.indexOf(c);return i<0?99:i};
 const catKey=d=>[d.circuit,d.division,d.gender].join('|');      // same category, any season
 const groupKey=d=>d.season+'|'+catKey(d);                         // one ranking list
-const groupLabel=d=>d.division+(d.gender==='X'||d.circuit==='Open Femenino'?'':' '+(GENDER[d.gender]||d.gender));
+const groupLabel=d=>(d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(d.division)?'Mayor · ':'')+d.division+(d.gender==='X'||d.circuit==='Open Femenino'?'':' '+(GENDER[d.gender]||d.gender));
 const stageLabel=d=>`Etapa ${ROMAN[d.stage]||d.stage}`;
 const shortStage=d=>`${ROMAN[d.stage]||d.stage}·${String(d.season).slice(2)}`;
 const fmtDate=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:d.toLocaleDateString('es-CR',{day:'numeric',month:'short',year:'numeric'})};
@@ -220,7 +221,7 @@ const topPct=(r,n)=>Math.max(1,Math.round(100*r/n));
 const sortGroups=(a,b)=>b.season-a.season||circRank(a.circuit)-circRank(b.circuit)||divRank(a.division)-divRank(b.division)||a.gender.localeCompare(b.gender);
 
 let docs=[], groups=new Map(), byCat=new Map();
-let F={q:'',season:'',circuit:'',div:'',gender:'',club:'',stage:'latest'};
+let F={q:'',season:'',circuit:'',div:'',gender:'',club:'',stage:'latest',showBase:false};
 let limit=250;
 try{const s=JSON.parse(localStorage.getItem('rn-filters2')||'null');if(s)Object.assign(F,s,{q:''})}catch(e){}
 const saveF=()=>{try{localStorage.setItem('rn-filters2',JSON.stringify({...F,q:''}))}catch(e){}};
@@ -237,6 +238,26 @@ function index(){
     arr.forEach((d,i)=>{d._prev=arr[i-1]||null});   // previous stage, or last stage of the previous season
   }
   for(const arr of groups.values())arr.sort((a,b)=>a.stage-b.stage);
+  // Base score: the value most players share without results (it drops each stage). Hidden by default.
+  divAt=new Map();
+  for(const d of docs){
+    const c=new Map();d.rows.forEach(r=>c.set(r[4],(c.get(r[4])||0)+1));
+    let best=null,n=0;c.forEach((v,k)=>{if(v>n){n=v;best=k}});
+    d._base=(n>=20&&n/d.rows.length>=0.3)?best:null;
+    const k=d.season+'|'+d.circuit+'|'+d.gender+'|'+d.stage;if(!divAt.has(k))divAt.set(k,new Map());
+    d.rows.forEach(r=>divAt.get(k).set(r[1],d.division));
+  }
+}
+let divAt=new Map();
+const DIVIDED=new Set(['Liga Mayor','Open Femenino']);
+function divMove(d,r){
+  // Player was in a different division of the same circuit in the previous stage of the season
+  if(!DIVIDED.has(d.circuit))return null;
+  const prevStages=docs.filter(x=>x.season===d.season&&x.circuit===d.circuit&&x.gender===d.gender&&x.stage<d.stage).map(x=>x.stage);
+  if(!prevStages.length)return null;
+  const pd=divAt.get(d.season+'|'+d.circuit+'|'+d.gender+'|'+Math.max(...prevStages))?.get(r[1]);
+  if(!pd||pd===d.division)return null;
+  return {up:divRank(pd)>divRank(d.division),from:pd.replace(/^Open /,'')};
 }
 const uniq=fn=>[...new Set(docs.map(fn).filter(v=>v!==''&&v!=null))];
 function fillSelect(el,values,cur,allLabel,labelFn=v=>v){
@@ -264,9 +285,13 @@ function renderStagebar(vg){
   const nums=[...new Set(vg.flatMap(a=>a.map(d=>d.stage)))].sort((a,b)=>a-b);
   if(F.stage!=='latest'&&!nums.includes(+F.stage))F.stage='latest';
   const chip=(v,l)=>`<button class="chip" data-stage="${v}" aria-pressed="${String(F.stage)===String(v)}">${l}</button>`;
-  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span>`;
+  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span><button class="chip" id="baseToggle" hidden title="Jugadores que comparten el puntaje inicial de la categoría (baja cada etapa): no tienen resultados registrados"><span></span></button>`;
 }
 function mvCell(d,r){
+  if(r[5]==='asc')return '<span class="mv up" title="Pasa a esta división para la próxima etapa">▲ Asciende</span>';
+  if(r[5]==='desc')return '<span class="mv down" title="Baja a esta división para la próxima etapa">▼ Desciende</span>';
+  const dm=divMove(d,r);
+  if(dm)return `<span class="mv ${dm.up?'up':'down'}" title="En la etapa anterior estaba en ${esc(dm.from)}">${dm.up?'▲ Sube':'▼ Baja'} de ${esc(dm.from)}</span>`;
   if(!d._prev)return '<span class="mv eq">–</span>';
   const p=d._prev._map.get(r[1]);
   if(!p)return '<span class="mv new">Nuevo</span>';
@@ -280,16 +305,19 @@ function render(){
   const vg=visibleGroups();
   renderStagebar(vg);
   const q=fold(F.q).trim();
-  let html='',count=0,shown=0;
+  let html='',count=0,shown=0,hiddenBase=0;
   for(const arr of vg){
     const d=F.stage==='latest'?arr[arr.length-1]:arr.find(x=>x.stage===+F.stage);
     if(!d)continue;
-    const rows=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&(!F.club||clubName(r[3])===F.club));
+    const hideBase=!F.showBase&&!q&&d._base!=null;
+    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&(!F.club||clubName(r[3])===F.club));
+    const rows=hideBase?all.filter(r=>r[4]!==d._base):all;
+    hiddenBase+=all.length-rows.length;
     if(!rows.length)continue;
     count+=rows.length;
     if(shown>=limit)continue;
-    const cmp=d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'';
-    html+=`<tr class="grp"><td colspan="7">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${cmp}</small></td></tr>`;
+    const cmp=(d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'')+(d.divisionBy==='points'?` · división asignada por puntos${d.playUpFrom?`; quien jugó una división arriba en la Etapa ${ROMAN[d.playUpFrom]||d.playUpFrom} se mantiene`:''} (el archivo no la indica)`:'');
+    html+=`<tr class="grp"><td colspan="7">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
     for(const r of rows){
       if(shown>=limit)break;shown++;
       html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td><td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
@@ -300,6 +328,8 @@ function render(){
   $('#tbody').innerHTML=html;
   $('#more').hidden=shown>=count;
   const s=$('#summary');if(s)s.textContent=count?`${count} atleta${count===1?'':'s'}`:'';
+  const bt=$('#baseToggle');
+  if(bt){bt.hidden=!(hiddenBase||F.showBase);bt.querySelector('span').textContent=F.showBase?'Ocultar jugadores en el puntaje base':`Mostrar ${hiddenBase} jugador${hiddenBase===1?'':'es'} en el puntaje base`;}
   renderHero();
 }
 function renderHero(){
@@ -399,7 +429,9 @@ function chart(pts){
 $('#fq').addEventListener('input',e=>{F.q=e.target.value;limit=250;render()});
 for(const [id,k] of [['#fseason','season'],['#fcircuit','circuit'],['#fdiv','div'],['#fgender','gender'],['#fclub','club']])
   $(id).addEventListener('change',e=>{F[k]=e.target.value;if(k==='season'||k==='circuit'){buildFilters()}limit=250;saveF();render()});
-$('#stagebar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b)return;F.stage=b.dataset.stage;saveF();render()});
+$('#stagebar').addEventListener('click',e=>{
+  if(e.target.closest('#baseToggle')){F.showBase=!F.showBase;limit=250;render();return}
+  const b=e.target.closest('[data-stage]');if(!b)return;F.stage=b.dataset.stage;saveF();render()});
 $('#tbody').addEventListener('click',e=>{const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)});
 $('#tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)}});
 $('#moreBtn').addEventListener('click',()=>{limit+=500;render()});
@@ -412,7 +444,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 
 /* Data */
 fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
-  docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4]])}));
+  docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
   index();buildFilters();render();renderStages();
   if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
 }).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
