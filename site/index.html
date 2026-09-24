@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ranking Nacional · Tenis de Mesa Costa Rica</title>
+<title>Ranking Nacional · Tenis de Mesa Curridabat</title>
 <meta name="description" content="Ranking nacional de tenis de mesa de Costa Rica por etapa, categoría y club.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2213%22 fill=%22%23E0681A%22/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
 :root{
-  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#EAEFF6; --text:#14213A; --muted:#5B6880; --line:#D9E0EB;
-  --table:#1B3A6B; --table-ink:#FFFFFF; --ball:#E0681A; --ball-soft:#FCE9DC;
+  --bg:#F3F6FB; --surface:#FFFFFF; --surface-2:#E9EFF8; --text:#13213D; --muted:#56637D; --line:#D6DEEB;
+  --table:#2552A8; --table-ink:#FFFFFF; --ball:#356AD4; --ball-soft:#E6EEFB; --red:#C8201D;
   --up:#1D7F47; --down:#BE3A3A; --up-soft:#E1F3E8; --down-soft:#F8E3E3;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -20,15 +21,15 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#0C1320; --surface:#131D2E; --surface-2:#1A2740; --text:#E4EAF4; --muted:#8B98B0; --line:#26334C;
-    --table:#23477F; --table-ink:#FFFFFF; --ball:#F08B42; --ball-soft:#3A2618;
+    --bg:#0C1322; --surface:#131D31; --surface-2:#1A2844; --text:#E4EAF5; --muted:#8C9AB4; --line:#26344F;
+    --table:#1D3F82; --table-ink:#FFFFFF; --ball:#7EA3EC; --ball-soft:#1A2A4A; --red:#E0605D;
     --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0C1320; --surface:#131D2E; --surface-2:#1A2740; --text:#E4EAF4; --muted:#8B98B0; --line:#26334C;
-  --table:#23477F; --table-ink:#FFFFFF; --ball:#F08B42; --ball-soft:#3A2618;
+  --bg:#0C1322; --surface:#131D31; --surface-2:#1A2844; --text:#E4EAF5; --muted:#8C9AB4; --line:#26344F;
+  --table:#1D3F82; --table-ink:#FFFFFF; --ball:#7EA3EC; --ball-soft:#1A2A4A; --red:#E0605D;
   --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
 }
 *{box-sizing:border-box}
@@ -38,13 +39,16 @@ button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ball);outline-offset:2px}
 
 /* Header: the table surface with the centre line */
-.hero{background:var(--table);color:var(--table-ink);position:relative;overflow:hidden}
+.hero{background:var(--table);color:var(--table-ink);position:relative;overflow:hidden;border-bottom:3px solid var(--red)}
 .hero::before{content:"";position:absolute;inset:0;background:
   linear-gradient(90deg,transparent calc(50% - 1px),rgba(255,255,255,.18) calc(50% - 1px),rgba(255,255,255,.18) calc(50% + 1px),transparent calc(50% + 1px));pointer-events:none}
 .hero::after{content:"";position:absolute;inset:10px;border:2px solid rgba(255,255,255,.22);pointer-events:none}
 .hero-in{position:relative;max-width:1180px;margin:0 auto;padding:28px 32px 24px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
 .eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:13px;opacity:.8;display:flex;align-items:center;gap:8px}
-.ball{width:10px;height:10px;border-radius:50%;background:var(--ball);display:inline-block}
+.ball{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
+.brand{display:flex;align-items:center;gap:18px}
+.brand img{width:84px;height:84px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #fff,0 4px 14px rgba(0,0,0,.25);flex:none}
+@media(max-width:520px){.brand{gap:12px}.brand img{width:58px;height:58px}}
 h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,54px);line-height:.95;margin:6px 0 0;text-wrap:balance;letter-spacing:.01em}
 .hero-stats{display:flex;gap:28px;flex-wrap:wrap}
 .hs b{display:block;font-family:var(--display);font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
@@ -85,7 +89,7 @@ tr.grp td small{font-family:var(--body);font-size:12px;color:var(--muted);font-w
 tbody tr.row{cursor:pointer}
 tbody tr.row:hover td{background:var(--surface-2)}
 .pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
-.pos.top1{color:var(--ball)}
+.pos.top1{color:var(--red)}
 .name{font-weight:600;white-space:normal;min-width:180px}
 .club{color:var(--muted)}
 .mv{display:inline-block;min-width:44px;text-align:center;border-radius:6px;padding:1px 6px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -186,9 +190,12 @@ footer.src a{color:inherit}
 
 <header class="hero">
   <div class="hero-in">
-    <div>
-      <div class="eyebrow"><span class="ball"></span> Tenis de mesa · Costa Rica</div>
-      <h1>Ranking Nacional</h1>
+    <div class="brand">
+      <img src="logo.png" alt="Tenis de Mesa Curridabat" width="84" height="84">
+      <div>
+        <div class="eyebrow"><span class="ball"></span> Tenis de Mesa Curridabat</div>
+        <h1>Ranking Nacional</h1>
+      </div>
     </div>
     <div class="hero-stats" id="heroStats"></div>
   </div>
