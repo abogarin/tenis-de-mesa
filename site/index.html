@@ -91,8 +91,10 @@ tbody tr.row:hover td{background:var(--surface-2)}
 .pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
 .pos.top1{color:var(--red)}
 .nextup{color:var(--ball)}
+.grp .xl{float:right;font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:0;color:var(--ball);text-decoration:none;border:1px solid var(--ball);border-radius:999px;padding:2px 10px;margin-left:10px;background:var(--surface)}
+.grp .xl:hover{background:var(--ball);color:#fff}
 .qform{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px;margin:6px 0 16px}
-.qform3{grid-template-columns:minmax(110px,150px) minmax(0,240px) minmax(0,1fr) minmax(0,1fr)}
+.qform3{grid-template-columns:minmax(0,240px) minmax(0,1fr) minmax(0,1fr)}
 @media(max-width:760px){.qform3{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.qform,.qform3{grid-template-columns:1fr}}
 .qhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
@@ -304,7 +306,8 @@ footer.src a{color:inherit}
       <div class="f"><label for="qb">Puntos del rival</label><input id="qb" type="number" inputmode="numeric" placeholder="Ej. 655"></div>
     </div>
     <div id="qnames" class="qform qform3" hidden>
-      <div class="f"><label for="qseason">Temporada</label><select id="qseason"></select></div>
+      <p class="note" style="grid-column:1/-1;margin:0">Con los puntos de la última etapa publicada de la temporada <span id="qyear"></span>.</p>
+      <div class="f" hidden><label for="qseason">Temporada</label><select id="qseason"></select></div>
       <div class="f"><label for="qcat">Ranking</label><select id="qcat"></select></div>
       <div class="f psearch"><label for="qme">Jugador</label><input id="qme" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg1" hidden></div></div>
       <div class="f psearch"><label for="qrival">Rival</label><input id="qrival" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg2" hidden></div></div>
@@ -547,7 +550,7 @@ function render(){
     count+=rows.length;
     if(shown>=limit)continue;
     const cmp=(d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'')+(d.divisionBy==='points'?` · división asignada por puntos${d.playUpFrom?`; quien jugó una división arriba en la Etapa ${ROMAN[d.playUpFrom]||d.playUpFrom} se mantiene`:''} (el archivo no la indica)`:'');
-    html+=`<tr class="grp"><td colspan="${cols}">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
+    html+=`<tr class="grp"><td colspan="${cols}">${esc(groupLabel(d))}${d.sourceFile?`<a class="xl" href="files/${d.season}/${encodeURIComponent(d.sourceFile)}" download title="Descargar el archivo Excel original de FECOTEME">Excel ⬇</a>`:''}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
     for(const r of rows){
       if(shown>=limit)break;shown++;
       html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td>${ex?extraCell(d,r):''}<td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
@@ -1133,8 +1136,8 @@ function calcPool(){
   return {pool,stage,list};
 }
 function buildCalcOptions(){
-  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);if(!Q.season)Q.season=seasons[0];
-  $('#qseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#qseason').value=String(Q.season);
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);Q.season=seasons[0];   // current season only
+  $('#qseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#qseason').value=String(Q.season);$('#qyear').textContent=Q.season;
   const cats=compareCats(Q.season);if(!cats.some(c=>c.key===Q.key))Q.key=(cats.find(c=>c.name==='U13 Masc')||cats[0]||{}).key;
   $('#qcat').innerHTML=cats.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');$('#qcat').value=Q.key||'';
   const {pool}=calcPool();
