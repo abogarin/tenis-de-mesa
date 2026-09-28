@@ -465,6 +465,14 @@ def main():
                 continue
             d["stage"] = int(d["stage"])
             rows.sort(key=lambda r: r[0])
+            # Some files number players by their finish in that stage's tournament instead of by
+            # ranking points (e.g. 2025 U13 Masc stage 5). If many positions contradict the points,
+            # re-rank by points.
+            inv = sum(1 for x, y in zip(rows, rows[1:]) if y[4] > x[4])
+            if len(rows) >= 5 and inv / (len(rows) - 1) >= 0.2:
+                rank_by_points(rows)
+                warnings.append(f"{path.name}{' / ' + sheet if sheet else ''}: positions did not follow the points "
+                                f"({inv} of {len(rows) - 1}); re-ranked by points.")
             d.update(sourceFile=path.name, rows=rows)
             sid = stage_id(d)
             if sid in built and built[sid][1] != path.name:
