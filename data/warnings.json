@@ -1,8 +1,16 @@
 {
  "warnings": [
+  "III-Ranking-Master-40-49.xlsx: positions did not follow the points (3 of 10); re-ranked by points.",
+  "III-Ranking-PTT.xlsx / C3: positions did not follow the points (2 of 5); re-ranked by points.",
   "2025__master__master-40-49-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-40-49.xlsx); using IV-Ranking-Master-40-49.xlsx.",
   "2025__master__master-50-59-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-50-59.xlsx); using IV-Ranking-Master-50-59.xlsx.",
   "2025__master__master-60-X__e4: found in two files (IV-Ranking-Master-30-39.xlsx and IV-Ranking-Master-60.xlsx); using IV-Ranking-Master-60.xlsx.",
+  "IV-Ranking-PTT.xlsx / C3: positions did not follow the points (2 of 5); re-ranked by points.",
+  "IV-Ranking-PTT.xlsx / C4: positions did not follow the points (4 of 10); re-ranked by points.",
+  "U11-Masculino-IVRN-menor.xlsx: positions did not follow the points (15 of 43); re-ranked by points.",
+  "U13MascVRNmenorTabulado.xlsx: positions did not follow the points (21 of 53); re-ranked by points.",
+  "V-Ranking-PTT-Tabulado.xlsx / C3: positions did not follow the points (2 of 5); re-ranked by points.",
+  "V-Ranking-PTT-Tabulado.xlsx / C4: positions did not follow the points (2 of 10); re-ranked by points.",
   "2026__liga-menor__u11-F__e4: found in two files (6rfvJD2kdVl4-IV-RN-Liga-Menor-Sub11-Fem.xlsx and BWvVAB42IpKJ-IV-RN-Liga-Menor-Sub11-Fem.xlsx); using BWvVAB42IpKJ-IV-RN-Liga-Menor-Sub11-Fem.xlsx.",
   "2026__liga-menor__u15-F__e4: found in two files (1K9mglLXDeEQ-IV-RN-Liga-Menor-Sub15-Fem.xlsx and IENj6gb0lJvt-IV-RN-Liga-Menor-Sub15-Fem.xlsx); using IENj6gb0lJvt-IV-RN-Liga-Menor-Sub15-Fem.xlsx.",
   "2026__liga-menor__u13-M__e3: found in two files (III-Liga-Menor-U13-Masculino.xlsx and RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx); using RRfdWPeQOUTt-III-Liga-Menor-U13-Masculino.xlsx.",
