@@ -91,6 +91,23 @@ tbody tr.row:hover td{background:var(--surface-2)}
 .pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
 .pos.top1{color:var(--red)}
 .nextup{color:var(--ball)}
+.qform{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px;margin:6px 0 16px}
+.qform3{grid-template-columns:minmax(110px,150px) minmax(0,240px) minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.qform3{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.qform,.qform3{grid-template-columns:1fr}}
+.qhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.qhead .pdfbtn{margin-left:auto}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;border-top:4px solid var(--up)}
+.qcard.lose{border-top-color:var(--down)}
+.qcard h3{font-family:var(--display);font-size:22px;margin:0 0 8px}
+.qline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.qline>b{font-family:var(--display);font-size:26px;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.qline>.club{grid-column:1/-1;font-size:13px}
+.qcard.win .qline:first-of-type>b{color:var(--up)}.qcard.lose .qline:first-of-type>b{color:var(--down)}
+.qrules{margin-top:18px}.qrules summary{cursor:pointer;font-weight:600;color:var(--ball)}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}
+.qrgrid table{min-width:0}
 .pdfbtn{border-color:var(--ball);color:var(--ball)}
 .pdfbtn:disabled{opacity:.6;cursor:wait}
 .kfilters{grid-template-columns:minmax(110px,160px) minmax(140px,220px) minmax(0,1fr)}
@@ -226,6 +243,7 @@ footer.src a{color:inherit}
     <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
     <button class="tab" role="tab" id="tab-player" aria-selected="false" data-tab="player">Jugador</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Comparar</button>
+    <button class="tab" role="tab" id="tab-calc" aria-selected="false" data-tab="calc">Calculadora</button>
     <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs" hidden>Clubes</button>
     <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages" hidden>Historial de etapas</button>
   </div>
@@ -274,6 +292,35 @@ footer.src a{color:inherit}
       <div class="f psearch"><label for="cq2">Jugador 3 (opcional)</label><input id="cq2" data-slot="2" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg2" hidden></div></div>
     </div>
     <div id="cbody"></div>
+  </section>
+
+  <section id="view-calc" hidden>
+    <div class="pctl"><span class="lbl">Calcular</span>
+      <button class="chip" data-qmode="pts" aria-pressed="true">Con puntos</button>
+      <button class="chip" data-qmode="names" aria-pressed="false">Con jugadores</button>
+    </div>
+    <div id="qpts" class="qform">
+      <div class="f"><label for="qa">Mis puntos</label><input id="qa" type="number" inputmode="numeric" placeholder="Ej. 612"></div>
+      <div class="f"><label for="qb">Puntos del rival</label><input id="qb" type="number" inputmode="numeric" placeholder="Ej. 655"></div>
+    </div>
+    <div id="qnames" class="qform qform3" hidden>
+      <div class="f"><label for="qseason">Temporada</label><select id="qseason"></select></div>
+      <div class="f"><label for="qcat">Ranking</label><select id="qcat"></select></div>
+      <div class="f psearch"><label for="qme">Jugador</label><input id="qme" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg1" hidden></div></div>
+      <div class="f psearch"><label for="qrival">Rival</label><input id="qrival" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg2" hidden></div></div>
+    </div>
+    <div id="qout"></div>
+    <details class="qrules"><summary>Reglas de puntuación (FECOTEME)</summary>
+      <div class="qrgrid">
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="3">Gana el favorito (más puntos)</th></tr><tr><th>Diferencia</th><th class="num">Ganador</th><th class="num">Perdedor</th></tr></thead><tbody>
+          <tr><td>1 – 50</td><td class="num">+8</td><td class="num">−5</td></tr><tr><td>51 – 100</td><td class="num">+6</td><td class="num">−4</td></tr><tr><td>101 – 250</td><td class="num">+4</td><td class="num">−3</td></tr><tr><td>251 – 500</td><td class="num">+3</td><td class="num">−2</td></tr><tr><td>501 – 1000</td><td class="num">+2</td><td class="num">−1</td></tr><tr><td>1001 o más</td><td class="num">0</td><td class="num">0</td></tr></tbody></table></div>
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="3">Gana el de menos puntos (o empatados)</th></tr><tr><th>Diferencia</th><th class="num">Ganador</th><th class="num">Perdedor</th></tr></thead><tbody>
+          <tr><td>0 – 100</td><td class="num">+10</td><td class="num">−5</td></tr><tr><td>101 – 250</td><td class="num">+15</td><td class="num">−8</td></tr><tr><td>251 – 500</td><td class="num">+20</td><td class="num">−10</td></tr><tr><td>501 – 1000</td><td class="num">+25</td><td class="num">−15</td></tr><tr><td>1001 o más</td><td class="num">+30</td><td class="num">−20</td></tr></tbody></table></div>
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="2">Otras bonificaciones</th></tr></thead><tbody>
+          <tr><td>Campeón</td><td class="num">+20</td></tr><tr><td>Subcampeón</td><td class="num">+15</td></tr><tr><td>3.º y 4.º lugar</td><td class="num">+10</td></tr><tr><td>5.º a 8.º lugar</td><td class="num">+5</td></tr><tr><td>BYE</td><td class="num">+10</td></tr><tr><td>No participar (todas las categorías)</td><td class="num">−20</td></tr></tbody></table></div>
+      </div>
+      <p class="note">Fuente: <a href="https://fecoteme.com/calculadora/" rel="noopener">calculadora oficial de FECOTEME</a>.</p>
+    </details>
   </section>
 
   <section id="view-clubs" hidden>
@@ -376,13 +423,13 @@ function buildFilters(){
   F.circuit=fillSelect($('#fcircuit'),[...new Set(inSeason.map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b)),F.circuit,'Todos');
   const inCirc=inSeason.filter(d=>!F.circuit||d.circuit===F.circuit);
   F.div=fillSelect($('#fdiv'),[...new Set(inCirc.map(d=>d.division))].sort((a,b)=>divRank(a)-divRank(b)),F.div,'Todas');
-  F.gender=fillSelect($('#fgender'),[...new Set(inCirc.map(d=>d.gender))].sort(),F.gender,'Todos',v=>GENDER[v]||v);
+  F.gender=fillSelect($('#fgender'),['M','F'],F.gender,'Todos',v=>GENDER[v]||v);
   const clubs=new Set();inSeason.forEach(d=>d.rows.forEach(r=>clubs.add(clubName(r[3]))));
   $('#clubList').innerHTML=[...clubs].sort((a,b)=>a.localeCompare(b,'es')).map(c=>`<option value="${esc(c)}">`).join('');
   $('#fclub').value=F.club||'';
 }
 function visibleGroups(){
-  return [...groups.values()].filter(a=>{const d=a[0];return String(d.season)===String(F.season)&&(!F.circuit||F.circuit===d.circuit)&&(!F.div||F.div===d.division)&&(!F.gender||F.gender===d.gender)})
+  return [...groups.values()].filter(a=>{const d=a[0];return String(d.season)===String(F.season)&&(!F.circuit||F.circuit===d.circuit)&&(!F.div||F.div===d.division)&&(!F.gender||F.gender===d.gender||d.gender==='X')})
     .sort((a,b)=>sortGroups(a[0],b[0]));
 }
 function renderStagebar(vg){
@@ -429,6 +476,11 @@ function dPts(d,r){
   const t=pp.from==='start'?` title="Desde los ${pp.v} puntos iniciales"`:pp.from==='season'?` title="Desde el cierre de ${d.season-1} (${pp.v} pts; mínimo 1090)"`:' title="Desde la etapa anterior"';
   return x>0?`<span class="dpts"${t}>+${x}</span>`:x<0?`<span class="mv down"${t}>${x}</span>`:`<span class="club"${t}>0</span>`}
 const clubOk=r=>!F.club||fold(clubName(r[3])).includes(fold(F.club));
+// Mixed rankings (Liga Mayor, Master, PTT) have no gender column: use the gender the player has in
+// Liga Menor or Open Femenino when known; players with unknown gender stay listed.
+let knownGender=new Map();
+function buildGenderIndex(){knownGender=new Map();for(const d of docs)if(d.gender==='M'||d.gender==='F')for(const r of d.rows)knownGender.set(r[1],d.gender)}
+const genderOk=(d,r)=>!F.gender||d.gender!=='X'||(knownGender.get(r[1])||F.gender)===F.gender;
 // The rankings and rows the current filters select (shared by the table and the PDF)
 function rankingSelection(){
   const q=fold(F.q).trim(),out=[];
@@ -436,7 +488,7 @@ function rankingSelection(){
     const d=F.stage==='latest'?arr[arr.length-1]:arr.find(x=>x.stage===+F.stage);
     if(!d)continue;
     const hideBase=!F.showBase&&!q&&d._base!=null;
-    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&clubOk(r));
+    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&clubOk(r)&&genderOk(d,r));
     const rows=hideBase?all.filter(r=>r[4]!==d._base):all;
     out.push({d,all,rows,hideBase});
   }
@@ -1058,13 +1110,116 @@ async function pdfClubs(){
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-pdf]');if(!b)return;
   const label=b.textContent;b.disabled=true;b.textContent='Generando PDF…';
-  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs})[b.dataset.pdf]();b.textContent=label}
+  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs,calc:pdfCalc})[b.dataset.pdf]();b.textContent=label}
   catch(err){console.error(err);b.textContent='No se pudo generar el PDF'}
   finally{b.disabled=false;setTimeout(()=>{b.textContent=label},2500)}
 });
+/* ---------- Calculadora (reglas FECOTEME: https://fecoteme.com/calculadora/) ---------- */
+const CALC_EXPECTED=[[50,8,5],[100,6,4],[250,4,3],[500,3,2],[1000,2,1],[Infinity,0,0]];   // favorite (more points) wins
+const CALC_UPSET=[[100,10,5],[250,15,8],[500,20,10],[1000,25,15],[Infinity,30,20]];        // underdog wins, or equal points
+function matchPoints(winner,loser){
+  const diff=Math.abs(winner-loser),expected=winner>loser;
+  const row=(expected?CALC_EXPECTED:CALC_UPSET).find(r=>diff<=r[0]);
+  return {gain:row[1],loss:row[2],diff,expected};
+}
+const Q={mode:'pts',season:null,key:null,me:null,rival:null,a:'',b:''};
+function calcDocs(){return docs.filter(d=>d.season===Q.season&&seriesKey(d)===Q.key)}
+// latest points (and position) of every player in the chosen ranking; Liga Mayor spans all divisions
+function calcPool(){
+  const ds=calcDocs();if(!ds.length)return {pool:new Map(),stage:null,list:[]};
+  const stage=Math.max(...ds.map(d=>d.stage)),last=ds.filter(d=>d.stage===stage),pool=new Map();
+  for(const d of last)for(const r of d.rows)pool.set(r[1],{carne:r[1],name:titleCase(r[2]),club:clubName(r[3]),points:r[4],rank:r[0],division:d.division,f:fold(r[2]),base:d._base!=null&&r[4]===d._base});
+  const list=[...pool.values()].sort((x,y)=>y.points-x.points);
+  return {pool,stage,list};
+}
+function buildCalcOptions(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);if(!Q.season)Q.season=seasons[0];
+  $('#qseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#qseason').value=String(Q.season);
+  const cats=compareCats(Q.season);if(!cats.some(c=>c.key===Q.key))Q.key=(cats.find(c=>c.name==='U13 Masc')||cats[0]||{}).key;
+  $('#qcat').innerHTML=cats.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');$('#qcat').value=Q.key||'';
+  const {pool}=calcPool();
+  if(Q.me&&!pool.has(Q.me))Q.me=null;if(Q.rival&&!pool.has(Q.rival))Q.rival=null;
+  $('#qme').value=Q.me?pool.get(Q.me).name:'';$('#qrival').value=Q.rival?pool.get(Q.rival).name:'';
+  $('#qa').value=Q.a;$('#qb').value=Q.b;
+  document.querySelectorAll('[data-qmode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.qmode===Q.mode)));
+  $('#qpts').hidden=Q.mode!=='pts';$('#qnames').hidden=Q.mode!=='names';
+}
+function showCalcSugg(which){
+  const inp=$(which==='me'?'#qme':'#qrival'),box=$(which==='me'?'#qsugg1':'#qsugg2'),q=fold(inp.value).trim();box.innerHTML='';
+  const other=which==='me'?Q.rival:Q.me;
+  const hits=calcPool().list.filter(a=>a.carne!==other&&(!q||a.f.includes(q)||a.carne.startsWith(q))).sort((x,y)=>(x.base-y.base)||(y.points-x.points)).slice(0,8);
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){const b=document.createElement('button');b.type='button';b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=a.name;const s=document.createElement('small');s.textContent=`${a.points} pts · ${a.club}`;b.append(l,s);box.append(b)}
+  box.hidden=false;
+}
+// position the player would have in the latest list with new points (Liga Mayor: within the division)
+function newPosition(list,carne,pts,division){
+  const scope=list.filter(x=>x.carne!==carne&&(!DIVIDED.has(calcCircuit())||x.division===division));
+  return 1+scope.filter(x=>x.points>pts).length;
+}
+const calcCircuit=()=>calcDocs()[0]?.circuit;
+function renderCalc(){
+  const out=$('#qout');
+  let me,rival,names=Q.mode==='names',list=[];
+  if(names){
+    const P2=calcPool();list=P2.list;me=Q.me&&P2.pool.get(Q.me);rival=Q.rival&&P2.pool.get(Q.rival);
+    if(!me||!rival){out.innerHTML='<div class="pempty">Elija el ranking y los dos jugadores para ver qué pasa si gana o si pierde.</div>';return}
+  }else{
+    const a=parseFloat(Q.a),b=parseFloat(Q.b);
+    if(!isFinite(a)||!isFinite(b)){out.innerHTML='<div class="pempty">Escriba sus puntos y los del rival para ver qué pasa si gana o si pierde.</div>';return}
+    me={name:'Usted',points:a};rival={name:'Rival',points:b};
+  }
+  const win=matchPoints(me.points,rival.points),lose=matchPoints(rival.points,me.points);
+  const fav=me.points>rival.points?'Usted es favorito':me.points<rival.points?'El rival es favorito':'Mismos puntos';
+  const favTxt=names?(me.points>rival.points?`${esc(me.name)} es favorito`:me.points<rival.points?`${esc(rival.name)} es favorito`:'Mismos puntos'):fav;
+  const pos=(p,pts)=>names?` <small class="club">· posición #${p.rank} → #${newPosition(list,p.carne,pts,p.division)}${DIVIDED.has(calcCircuit())?' en '+esc(p.division):''}</small>`:'';
+  const line=(p,delta)=>`<div class="qline"><span>${esc(p.name)}</span><b>${delta>0?'+':''}${delta}</b><span class="club">${p.points} → <b>${p.points+delta}</b> pts${pos(p,p.points+delta)}</span></div>`;
+  const note=r=>r.expected?'Resultado esperado: gana el favorito.':'Resultado inesperado: gana quien tiene menos puntos (o empatados en puntos).';
+  const first=names?' '+esc(me.name.split(' ')[0]):'';
+  out.innerHTML=`<div class="qhead"><span class="tag">Diferencia: ${win.diff} puntos</span><span class="tag">${favTxt}</span><button class="chip pdfbtn" data-pdf="calc">Descargar PDF</button></div>
+    <div class="qgrid">
+      <div class="qcard win"><h3>Si gana${first}</h3>${line(me,win.gain)}${line(rival,-win.loss)}<p class="pct">${note(win)}</p></div>
+      <div class="qcard lose"><h3>Si pierde${first}</h3>${line(me,-lose.loss)}${line(rival,lose.gain)}<p class="pct">${note(lose)}</p></div>
+    </div>`;
+}
+document.querySelectorAll('[data-qmode]').forEach(b=>b.addEventListener('click',()=>{
+  Q.mode=b.dataset.qmode;
+  if(Q.mode==='pts'){Q.me=null;Q.rival=null}else{Q.a='';Q.b=''}   // the two ways are exclusive
+  buildCalcOptions();renderCalc()}));
+$('#qa').addEventListener('input',e=>{Q.a=e.target.value;renderCalc()});
+$('#qb').addEventListener('input',e=>{Q.b=e.target.value;renderCalc()});
+$('#qseason').addEventListener('change',e=>{Q.season=+e.target.value;buildCalcOptions();renderCalc()});
+$('#qcat').addEventListener('change',e=>{Q.key=e.target.value;Q.me=null;Q.rival=null;buildCalcOptions();renderCalc()});
+for(const [which,inpSel,boxSel] of [['me','#qme','#qsugg1'],['rival','#qrival','#qsugg2']]){
+  const inp=$(inpSel),box=$(boxSel);
+  inp.addEventListener('focus',()=>showCalcSugg(which));
+  inp.addEventListener('input',()=>{if(!inp.value.trim()){Q[which]=null;renderCalc()}showCalcSugg(which)});
+  inp.addEventListener('keydown',e=>{const items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+    let k=items.findIndex(b=>b.classList.contains('act'));
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[k]?.classList.remove('act');k=e.key==='ArrowDown'?Math.min(items.length-1,k+1):Math.max(0,k-1);items[k].classList.add('act')}
+    else if(e.key==='Enter'){e.preventDefault();(items[k]||items[0]).click()}else if(e.key==='Escape')box.hidden=true});
+  box.addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(!b)return;Q[which]=b.dataset.carne;inp.value=b.querySelector('span').textContent;box.hidden=true;renderCalc()});
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#view-calc .psearch'))document.querySelectorAll('#view-calc .sugg').forEach(x=>x.hidden=true)});
+async function pdfCalc(){
+  const names=Q.mode==='names',catName=(compareCats(Q.season).find(c=>c.key===Q.key)||{}).name||'';
+  const doc=await newPdf('Calculadora de puntos',names?`${catName} ${Q.season} · ${$('#qme').value} vs ${$('#qrival').value}`:`Por puntos: ${Q.a} vs ${Q.b}`);
+  let y=doc._startY;doc.setTextColor(...INK);doc.setFontSize(10);
+  const head=[...document.querySelectorAll('#qout .qhead .tag')].map(t=>t.textContent).join(' · ');doc.text(head,40,y);y+=12;
+  for(const c of document.querySelectorAll('#qout .qcard')){
+    const rows=[...c.querySelectorAll('.qline')].map(l=>[...l.children].map(x=>x.textContent.replace(/\s+/g,' ').replace(/→/g,'->').trim()));
+    doc.autoTable({...tableStyle,startY:y+6,head:[[c.querySelector('h3').textContent,'Cambio','Puntos']],body:rows});
+    y=doc.lastAutoTable.finalY+4;doc.setFontSize(8.5);doc.setTextColor(...MUTED);doc.text(c.querySelector('.pct').textContent,40,y+8);y+=18;
+  }
+  doc.autoTable({...tableStyle,startY:y+6,head:[['Diferencia de puntos','Gana el favorito: ganador / perdedor','Diferencia','Gana el de menos puntos: ganador / perdedor']],
+    body:[['1 - 50','+8 / -5','0 - 100','+10 / -5'],['51 - 100','+6 / -4','101 - 250','+15 / -8'],['101 - 250','+4 / -3','251 - 500','+20 / -10'],['251 - 500','+3 / -2','501 - 1000','+25 / -15'],['501 - 1000','+2 / -1','1001 o más','+30 / -20'],['1001 o más','0 / 0','','']]});
+  pdfFooters(doc);doc.save(pdfName(['calculadora',names?$('#qme').value:Q.a,names?$('#qrival').value:Q.b]));
+}
 function showTab(name){
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===name)));
-  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';$('#view-compare').hidden=name!=='compare';$('#view-clubs').hidden=name!=='clubs';
+  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';$('#view-compare').hidden=name!=='compare';$('#view-clubs').hidden=name!=='clubs';$('#view-calc').hidden=name!=='calc';
+  if(name==='calc'){buildCalcOptions();renderCalc()}
   if(name==='clubs'){buildClubFilters();renderClubs()}
   if(name==='player')renderPlayer();
   if(name==='compare'){buildCompareOptions();renderCompare()}
@@ -1075,7 +1230,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>show
 fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
   docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
   if(j.ligaMayorDivisions)MAYOR_MIN={...MAYOR_MIN,...j.ligaMayorDivisions};
-  index();buildAgeIndex();buildFilters();render();renderStages();buildAthletes();
+  index();buildAgeIndex();buildGenderIndex();buildFilters();render();renderStages();buildAthletes();
   const hm=/^#j(.+)$/.exec(location.hash);if(hm){showTab('player');selectPlayer(decodeURIComponent(hm[1]),false)}
   if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
 }).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
