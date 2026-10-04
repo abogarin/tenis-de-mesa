@@ -1,0 +1,40 @@
+rules_version = '2';
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+// Only users listed in coaches/{uid} can read or write, and only for their own club.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isCoach() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/coaches/$(request.auth.uid));
+    }
+    function myClub() {
+      return get(/databases/$(database)/documents/coaches/$(request.auth.uid)).data.club;
+    }
+    function ownClub(data) {
+      return isCoach() && data.club == myClub();
+    }
+
+    // Each coach can read only their own profile. Profiles are created by hand in the console.
+    match /coaches/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // One document per club and training day: {club, date, marks: {athleteId: P|A|J|T}, cancelled}
+    match /attendance/{id} {
+      // resource == null: a day with no roll call yet (the page listens to it before the first mark)
+      allow read: if isCoach() && (resource == null || resource.data.club == myClub());
+      allow create: if ownClub(request.resource.data);
+      allow update: if ownClub(resource.data) && request.resource.data.club == resource.data.club;
+      allow delete: if false;
+    }
+
+    // Athletes added by hand (not yet in the national ranking)
+    match /athletes/{id} {
+      allow read: if ownClub(resource.data);
+      allow create: if ownClub(request.resource.data);
+      allow update: if ownClub(resource.data) && request.resource.data.club == resource.data.club;
+      allow delete: if false;
+    }
+  }
+}

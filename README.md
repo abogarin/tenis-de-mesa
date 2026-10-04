@@ -54,7 +54,7 @@ Valid values:
 - **gender:** `M`, `F`, `X` (mixed)
 - **circuit:** `Liga Menor`, `Liga Mayor`, `Open Femenino`, `Master`, `PTT`
 
-**Re-uploading** the same season, circuit, category, gender and stage replaces the earlier version. **Removing** a stage means deleting its file in `data/stages/`.
+**Re-uploading** the same season, circuit, category, gender and stage replaces the earlier version. **Removing** a stage means deleting its workbook from `archive/<year>/`. Every run rebuilds all rankings from the workbooks in `archive/`, so fixes to the converter also apply to older files.
 
 ## Athletes across years
 Athletes are matched by **carné**, so their history carries over when they move from U11 to U13, or between circuits. Rankings from different categories have different sizes, so progress charts use the **percentile** (e.g. "Top 5%") rather than the raw position. Files without a carné column fall back to matching by name.
@@ -80,3 +80,28 @@ Athletes are matched by **carné**, so their history carries over when they move
 4. Optional: add a custom domain under **Settings → Pages**.
 
 `site/` is a plain static site, so it can also be copied to S3 and CloudFront.
+
+## Asistencia (private attendance tab)
+
+Coaches log in and take training attendance for their club's athletes. The data is stored in Firebase (free tier), never in this repository.
+
+- **Roster:** athletes whose most recent 2026 ranking row lists the coach's club, grouped by age category (U9 Fem, U13 Masc, …, Open Fem, Mayor, Master, PTT). Athletes not in any ranking yet can be added with **+ Agregar atleta**.
+- **Pasar lista:** choose the date and one or more categories, then tap Presente / Ausente / Justificado / Tarde. Every tap saves immediately. **Sesión cancelada** excludes that day from the percentages.
+- **Reporte:** choose a period, categories and optionally one athlete. Attendance % = (present + late) ÷ (present + late + absent); justified absences don't count.
+
+### One-time Firebase setup
+1. Go to https://console.firebase.google.com → **Add project** (e.g. `tm-curridabat`). Google Analytics is not needed.
+2. **Build → Authentication → Get started → Email/Password → Enable.**
+3. **Authentication → Settings → Authorized domains → Add domain:** `abogarin.github.io`.
+4. **Build → Firestore Database → Create database →** production mode, location `nam5` (or the closest).
+5. **Firestore → Rules:** replace everything with the contents of `firestore.rules` → **Publish**.
+6. **Project settings (gear) → Your apps → Web (`</>`)** → register the app (no Hosting). Copy the `firebaseConfig` values into `site/firebase-config.js` (replace `null`) and commit.
+
+### Adding a coach
+1. **Authentication → Users → Add user**: their email and a temporary password. Copy the **User UID**.
+2. **Firestore → Start collection** `coaches` (the first time) → **Document ID** = that UID → fields:
+   - `club` (string): `Curridabat`
+   - `name` (string): the coach's name
+3. The coach can change the password with **Olvidé mi contraseña** on the login screen.
+
+Removing a coach: delete their `coaches` document (and the user under Authentication).
