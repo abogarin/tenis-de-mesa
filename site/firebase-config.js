@@ -4,10 +4,14 @@
 window.FIREBASE_CONFIG = null;
 /* Example:
 window.FIREBASE_CONFIG = {
-  apiKey: "AIza...",
+  apiKey: "AIzaSyC30UcfpmHHY8Y7odsqo4IgXS1TqNjoYRM",
   authDomain: "tm-curridabat.firebaseapp.com",
   projectId: "tm-curridabat",
-  appId: "1:123456789:web:abc123"
+  storageBucket: "tm-curridabat.firebasestorage.app",
+  messagingSenderId: "366016870017",
+  appId: "1:366016870017:web:25329ee6b8b59244cd3f80",
+  measurementId: "G-JN78YTWD81"
 };
+
 */
 window.ATTENDANCE_CLUB = 'Curridabat';
