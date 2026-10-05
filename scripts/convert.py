@@ -17,6 +17,8 @@ For every workbook:
      workbooks are moved from inbox/ to archive/<season>/.
 To remove a stage, delete its workbook from archive/.
 Finally all stages are combined into site/data/ranking.json.
+Workbooks that include the tournament itself ("Grupo N" and "LLAVE" sheets) also give the
+individual matches, saved to site/data/matches.json.
 """
 import datetime as dt
 import json
@@ -32,6 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INBOX, ARCHIVE = ROOT / "inbox", ROOT / "archive"
 STAGES, OUT = ROOT / "data" / "stages", ROOT / "site" / "data" / "ranking.json"
 WARN_FILE = ROOT / "data" / "warnings.json"
+MATCHES_OUT = ROOT / "site" / "data" / "matches.json"
 
 ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10}
 ORD_WORDS = {"PRIMER": 1, "PRIMERO": 1, "PRIMERA": 1, "1ER": 1, "1RO": 1, "1RN": 1, "SEGUNDO": 2, "SEGUNDA": 2, "2DO": 2, "2RN": 2,
@@ -188,6 +191,150 @@ def read_tables(wb):
     if len(cands) > 1 and all(bracket_like(n) for n, _ in cands):
         return [x for n, g in cands for x in flat(n, g)]  # one sheet per division, e.g. Master 30-39 / 60+
     return flat(None, cands[0][1]) if cands else []
+
+
+# ---------- matches (group and knockout sheets) ----------
+
+ROUND_NAMES = {"1/32": "Ronda de 64", "1/16": "Ronda de 32", "1/8": "Octavos", "QF": "Cuartos", "1/4": "Cuartos",
+               "SF": "Semifinal", "1/2": "Semifinal", "F": "Final", "3Y4": "3.er lugar"}
+
+
+def _num(v):
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return int(v)
+    if isinstance(v, str) and v.strip().isdigit():
+        return int(v.strip())
+    return None
+
+
+def _carne(v):
+    n = _num(v)
+    return str(n) if n is not None else None
+
+
+def _sets(vals):
+    """[a1, b1, a2, b2, ...] -> [[a1, b1], ...] for the sets actually played."""
+    out = []
+    for a, b in zip(vals[0::2], vals[1::2]):
+        a, b = _num(a), _num(b)
+        if a is None or b is None or (a == 0 and b == 0):
+            continue
+        out.append([a, b])
+    return out
+
+
+def _grid(ws):
+    return [list(r) for r in ws.iter_rows(values_only=True)]
+
+
+def _find(grid, pred):
+    for i, row in enumerate(grid):
+        for j, v in enumerate(row):
+            if isinstance(v, str) and pred(fold(v).strip()):
+                return i, j
+    return None
+
+
+def _right(row, j):
+    for v in row[j + 1:]:
+        if v not in (None, ""):
+            return v
+    return None
+
+
+def group_matches(ws):
+    g = _grid(ws)
+    hdr = next((i for i, r in enumerate(g) if {"ORDEN", "CARNE", "JUGADORES"} <= {fold(v).strip() for v in r if isinstance(v, str)}), None)
+    part = _find(g, lambda t: t.startswith("PARTIDA"))
+    if hdr is None or not part:
+        return []
+    cols = {fold(v).strip(): j for j, v in enumerate(g[hdr]) if isinstance(v, str)}
+    players = {}
+    for r in g[hdr + 1:]:
+        o = _num(r[cols["ORDEN"]]) if cols["ORDEN"] < len(r) else None
+        if o is None:
+            break
+        players[o] = [_carne(r[cols["CARNE"]]), str(r[cols["JUGADORES"]] or "").strip(), str(r[cols.get("LUGAR", cols["JUGADORES"] + 1)] or "").strip()]
+    gp = _find(g, lambda t: t.startswith("GRUPO N"))
+    group = _num(_right(g[gp[0]], gp[1])) if gp else _num(re.sub(r"\D", "", ws.title) or None)
+    fp = _find(g, lambda t: t.startswith("FECHA"))
+    date = _right(g[fp[0]], fp[1]) if fp else None
+    date = date.date().isoformat() if isinstance(date, dt.datetime) else None
+    pi, pj = part
+    head = [fold(v).strip() if isinstance(v, str) else "" for v in g[pi]]
+    set_cols = [j for j, t in enumerate(head) if "SET" in t]
+    win_col = next((j for j, t in enumerate(head) if t.startswith("GANADOR")), None)
+    out, i = [], pi + 1
+    while i + 1 < len(g):
+        r1, r2 = g[i], g[i + 1]
+        if _num(r1[pj]) is None:
+            i += 1
+            if i > pi + 40:
+                break
+            continue
+        oa, ob = _num(r1[pj + 1]), _num(r2[pj + 1])
+        if oa in players and ob in players:
+            vals = []
+            for j in set_cols:
+                vals += [r1[j], r2[j]]
+            sets = _sets(vals)
+            if sets:
+                won_a = sum(a > b for a, b in sets)
+                w = _num(r1[win_col]) if win_col is not None else None
+                win = 0 if w == oa else 1 if w == ob else (0 if won_a * 2 > len(sets) else 1)
+                out.append({"r": "Grupo", "g": group, "d": date, "a": players[oa], "b": players[ob], "s": sets, "w": win})
+        i += 2
+    return out
+
+
+def knockout_matches(ws):
+    g = _grid(ws)
+    hdr = next((i for i, r in enumerate(g) if {"MATCH", "ROUND", "PLA 1", "PLA 2"} <= {fold(v).strip() for v in r if isinstance(v, str)}), None)
+    if hdr is None:
+        return []
+    head = [fold(v).strip() if isinstance(v, str) else "" for v in g[hdr]]
+    c = {t: j for j, t in reversed(list(enumerate(head))) if t}
+    ass = [j for j, t in enumerate(head) if t == "ASS"]
+    ga, gx = c.get("G A"), c.get("G X")
+    if not ass or ga is None or "A" not in c or "B" not in c:
+        return []
+    set_cols = list(range(ass[-1] + 1, ga))
+    out = []
+    for r in g[hdr + 1:]:
+        if _num(r[c["MATCH"]]) is None:
+            continue
+        ca, cb = _carne(r[c["A"]]), _carne(r[c["B"]])
+        na, nb = str(r[c["PLA 1"]] or "").strip(), str(r[c["PLA 2"]] or "").strip()
+        if not ca or not cb or "BYE" in (fold(na), fold(nb)):
+            continue
+        sets = _sets([r[j] for j in set_cols])
+        if not sets:
+            continue
+        a_won, b_won = _num(r[ga]), _num(r[gx])
+        win = (0 if a_won > b_won else 1) if a_won is not None and b_won is not None and a_won != b_won \
+            else (0 if sum(x > y for x, y in sets) * 2 > len(sets) else 1)
+        rnd = re.sub(r"\s+", "", fold(str(r[c["ROUND"]] or "")))
+        out.append({"r": ROUND_NAMES.get(rnd, str(r[c["ROUND"]] or "").strip()), "g": None, "d": None,
+                    "a": [ca, na, str(r[ass[0]] or "").strip()], "b": [cb, nb, str(r[ass[-1]] or "").strip()], "s": sets, "w": win})
+    return out
+
+
+def read_matches(wb):
+    """Individual matches from 'Grupo N' and 'LLAVE ..' sheets, in playing order (groups first)."""
+    groups, ko = [], []
+    for ws in wb.worksheets:
+        t = fold(ws.title).strip()
+        try:
+            if re.match(r"GRUPO\s*\d+", t):
+                groups += group_matches(ws)
+            elif t.startswith("LLAVE"):
+                ko += knockout_matches(ws)
+        except Exception as e:  # noqa: BLE001  a layout we don't know: skip the sheet, keep the ranking
+            print(f"WARNING {ws.title}: could not read matches ({e})")
+    date = next((m["d"] for m in groups if m["d"]), None)
+    for m in ko:
+        m["d"] = date
+    return groups + ko
 
 
 # ---------- metadata ----------
@@ -429,6 +576,7 @@ def main():
     archived = sorted(p for p in ARCHIVE.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
     incoming = sorted(p for p in INBOX.rglob("*.xls*") if p.suffix.lower() in (".xlsx", ".xlsm") and not p.name.startswith("~$"))
     built = {}  # stage id -> (doc, file)
+    found_matches = {}  # stage id -> {file: [matches]}
     undated = []  # files with no stage in the name: accepted only if identical to another file
     for path in archived + incoming:
         is_new = path in incoming
@@ -442,6 +590,7 @@ def main():
             errors.append(f"{path.relative_to(ROOT)}: no ranking table found (needs Nombre and Puntos columns)")
             continue
         meta = metadata(path, wb, warnings)
+        file_matches = read_matches(wb) if len(tables) == 1 else []
         tables = combine_open_divisions(meta, tables)
         saved = []
         for sheet, rows in tables:
@@ -475,6 +624,8 @@ def main():
                                 f"({inv} of {len(rows) - 1}); re-ranked by points.")
             d.update(sourceFile=path.name, rows=rows)
             sid = stage_id(d)
+            if file_matches:
+                found_matches.setdefault(sid, {})[path.name] = file_matches
             if sid in built and built[sid][1] != path.name:
                 prev = built[sid][1]
                 keep_prev = bool(re.search(r"REV|CORREC", fold(prev))) and not re.search(r"REV|CORREC", fold(path.name)) and not is_new
@@ -527,6 +678,14 @@ def main():
                                "ligaMayorDivisions": mayor_thresholds(),
                                "stages": stages}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Wrote {OUT.relative_to(ROOT)} with {len(stages)} stages")
+
+    # Matches: from the file used for the stage, or from another copy of the same stage that has them
+    matches = {}
+    for sid, by_file in found_matches.items():
+        if sid in built:
+            matches[sid] = by_file.get(built[sid][1]) or next(iter(by_file.values()))
+    MATCHES_OUT.write_text(json.dumps(matches, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"Wrote {MATCHES_OUT.relative_to(ROOT)} with {sum(map(len, matches.values()))} matches from {len(matches)} stages")
 
     WARN_FILE.write_text(json.dumps({"warnings": warnings}, ensure_ascii=False, indent=1), encoding="utf-8")
     for w in warnings:
