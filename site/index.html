@@ -257,6 +257,9 @@ footer.src a{color:inherit}
 .mtable td.sets span{display:inline-block;min-width:44px;text-align:center;border-radius:6px;padding:1px 6px;margin:1px 2px;font-variant-numeric:tabular-nums;font-size:13px}
 .mtable td.sets .sw{background:var(--up-soft);color:var(--up);font-weight:700}
 .mtable td.sets .sl{background:var(--surface-2);color:var(--muted)}
+.mtable tr.bonus td{color:var(--muted);font-size:13px}
+.mtable tr.tot td{border-top:2px solid var(--line)}
+.mpts{font-weight:700;font-variant-numeric:tabular-nums}.mpts.up{color:var(--up)}.mpts.down{color:var(--down)}
 .mres{display:inline-block;width:22px;text-align:center;border-radius:6px;font-weight:700;color:#fff;font-size:12px;padding:1px 0}
 .mres.w{background:var(--up)}.mres.l{background:var(--down)}
 .linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:600;color:inherit;cursor:pointer;text-align:left}
@@ -1733,12 +1736,15 @@ async function pdfAtt(){
   pdfFooters(doc);doc.save(pdfName(['asistencia',A.club,A.from,A.to]));
 }
 /* ---------- Partidos: individual matches from workbooks that include groups and knockout ---------- */
-const MT={season:'',circuit:'',div:'',gender:'',who:'',data:null,loading:null};
+const MT={season:'',circuit:'',div:'',gender:'',who:'',data:null,loading:null,model:new Map()};
 function mtLoad(){
-  if(!MT.loading)MT.loading=fetch('data/matches.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})).then(j=>{MT.data=j;return j});
+  if(!MT.loading)MT.loading=fetch('data/matches.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})).then(j=>{
+    for(const k in j)if(Array.isArray(j[k]))j[k]={pts:{},m:j[k]};   // older file format
+    MT.data=j;return j});
   return MT.loading;
 }
-const mtDocs=()=>docs.filter(d=>MT.data&&MT.data[d.id]&&MT.data[d.id].length);
+const mtM=d=>MT.data?.[d.id]?.m||[];
+const mtDocs=()=>docs.filter(d=>mtM(d).length);
 function mtStages(){return mtDocs().filter(d=>String(d.season)===String(MT.season)&&(!MT.circuit||d.circuit===MT.circuit)&&(!MT.div||d.division===MT.div)&&(!MT.gender||d.gender===MT.gender))}
 function mtFilters(){
   const all=mtDocs();
@@ -1749,19 +1755,64 @@ function mtFilters(){
   MT.div=fillSelect($('#mdiv'),[...new Set(c.map(d=>d.division))].sort((a,b)=>divRank(a)-divRank(b)),MT.div,'Todas');
   MT.gender=fillSelect($('#mgender'),[...new Set(c.filter(d=>!MT.div||d.division===MT.div).map(d=>d.gender))].filter(g=>g!=='X'),MT.gender,'Todos',v=>GENDER[v]||v);
 }
-// every match of the selected stages, seen from the given player's side
-function mtPlayerMatches(carne){
-  const out=[];
-  for(const d of mtStages())for(const m of MT.data[d.id]){
-    const side=m.a[0]===carne?0:m.b[0]===carne?1:-1;if(side<0)continue;
-    const me=side?m.b:m.a,op=side?m.a:m.b,sets=m.s.map(([x,y])=>side?[y,x]:[x,y]);
-    out.push({d,round:m.r==='Grupo'?`Grupo ${m.g??''}`.trim():m.r,ko:m.r!=='Grupo',date:m.d,me,op,sets,won:(m.w===side),sw:sets.filter(([x,y])=>x>y).length,sl:sets.filter(([x,y])=>y>x).length});
+/* Points (FECOTEME calculator): each match by the points both players had when the stage started; BYE +10;
+   champion +20, runner-up +15, semifinal losers +10, quarterfinal losers +5.
+   FECOTEME does not apply it the same way in every stage: in some, group matches count; in others only the knockout
+   counts and players who don't reach it lose 20. For each stage we use whichever of the two reproduces the official
+   ranking for more players. */
+const MT_BONUS={Final:[20,15],Semifinal:[0,10],Cuartos:[0,5]};
+const MT_BONUS_LABEL={Final:['Campeón','Subcampeón'],Semifinal:['','Semifinalista'],Cuartos:['','Cuartos de final']};
+function mtEntry(d,carne){
+  const p=MT.data[d.id]?.pts?.[carne];if(p!=null)return p;
+  const r=d._map.get(carne);if(!r)return null;const pp=prevPoints(d,r);return pp?pp.v:null;
+}
+function mtCompute(d,model){
+  // -> Map(carne -> {items:[{m,pts}], bonus:[{label,pts}], total})
+  const P=new Map(),get=c=>{if(!P.has(c))P.set(c,{items:[],bonus:[],total:0,ko:false});return P.get(c)};
+  for(const m of mtM(d)){
+    if(m.bye){const x=get(m.a[0]);x.ko=true;x.items.push({m,pts:10});x.total+=10;continue}
+    const ko=m.r!=='Grupo',A=get(m.a[0]),B=get(m.b[0]);if(ko){A.ko=B.ko=true}
+    const [W,L]=m.w===0?[m.a[0],m.b[0]]:[m.b[0],m.a[0]];
+    const pw=mtEntry(d,W),pl=mtEntry(d,L);
+    let g=null,l=null;
+    if((ko||model==='B')&&pw!=null&&pl!=null){const r=matchPoints(pw,pl);g=r.gain;l=-r.loss}
+    get(W).items.push({m,pts:g});get(L).items.push({m,pts:l});get(W).total+=g||0;get(L).total+=l||0;
+    const b=MT_BONUS[m.r];
+    if(b){if(b[0]){get(W).bonus.push({label:MT_BONUS_LABEL[m.r][0],pts:b[0]});get(W).total+=b[0]}get(L).bonus.push({label:MT_BONUS_LABEL[m.r][1],pts:b[1]});get(L).total+=b[1]}
   }
-  return out.sort((x,y)=>x.d.season-y.d.season||x.d.stage-y.d.stage||seriesOrder(x.d)-seriesOrder(y.d)||(x.ko-y.ko));
+  if(model==='A')for(const x of P.values())if(!x.ko){x.bonus.push({label:'No pasó a la llave',pts:-20});x.total-=20}
+  return P;
+}
+function mtModel(d){
+  if(MT.model.has(d.id))return MT.model.get(d.id);
+  let best=null;
+  for(const model of ['B','A']){
+    const P=mtCompute(d,model);let ok=0;
+    for(const [c,x] of P){const e=mtEntry(d,c),r=d._map.get(c);if(e!=null&&r&&e+x.total===r[4])ok++}
+    if(!best||ok>best.ok)best={model,ok,P};
+  }
+  MT.model.set(d.id,best);return best;
+}
+// every match of the selected stages, seen from the given player's side, grouped by stage
+function mtPlayerStages(carne){
+  const out=[];
+  for(const d of mtStages().sort((a,b)=>a.stage-b.stage||seriesOrder(a)-seriesOrder(b))){
+    const md=mtModel(d),me=md.P.get(carne);if(!me)continue;
+    const rows=[];
+    for(const it of me.items){
+      const m=it.m;
+      if(m.bye){rows.push({round:m.r,bye:true,pts:it.pts});continue}
+      const side=m.a[0]===carne?0:1,op=side?m.a:m.b,sets=m.s.map(([x,y])=>side?[y,x]:[x,y]);
+      rows.push({round:m.r==='Grupo'?`Grupo ${m.g??''}`.trim():m.r,ko:m.r!=='Grupo',op,sets,won:m.w===side,sw:sets.filter(([x,y])=>x>y).length,sl:sets.filter(([x,y])=>y>x).length,pts:it.pts});
+    }
+    const entry=mtEntry(d,carne),r=d._map.get(carne),date=mtM(d).find(m=>m.d)?.d;
+    out.push({d,rows,bonus:me.bonus,total:me.total,entry,official:r?r[4]:null,model:md.model,date});
+  }
+  return out;
 }
 function mtPlayers(){
   const P=new Map();
-  for(const d of mtStages())for(const m of MT.data[d.id])for(const p of [m.a,m.b]){const x=P.get(p[0])||{carne:p[0],name:titleCase(p[1]),club:clubName(p[2]),n:0};x.n++;P.set(p[0],x)}
+  for(const d of mtStages())for(const m of mtM(d))for(const p of [m.a,m.b]){if(!p||!p[0])continue;const x=P.get(p[0])||{carne:p[0],name:titleCase(p[1]),club:clubName(p[2]),n:0};if(!m.bye)x.n++;P.set(p[0],x)}
   return [...P.values()];
 }
 function mtSugg(){
@@ -1770,6 +1821,8 @@ function mtSugg(){
   box.innerHTML=list.map(a=>`<button type="button" data-mwho="${esc(a.carne)}"><span>${esc(a.name)}</span><small>${esc(a.club)} · ${a.n} partido${a.n===1?'':'s'}</small></button>`).join('')||'<div class="empty" style="padding:10px 12px">Sin coincidencias en estos filtros</div>';
   box.hidden=false;
 }
+const sgn=v=>v==null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v);
+const ptsCell=v=>v==null?'<span class="club" title="En esta etapa los partidos de grupo no suman puntos">—</span>':`<span class="mpts ${v>0?'up':v<0?'down':''}">${sgn(v)}</span>`;
 function mtRender(){
   const body=$('#mbody');
   if(!MT.data){body.innerHTML='<div class="pempty">Cargando partidos…</div>';return}
@@ -1778,24 +1831,28 @@ function mtRender(){
   const st=mtStages();
   const avail=`<p class="note" style="margin-top:10px">Partidos disponibles: ${mtDocs().filter(d=>String(d.season)===String(MT.season)).sort((a,b)=>a.stage-b.stage||seriesOrder(a)-seriesOrder(b)).map(d=>`${esc(seriesName(d))} · Etapa ${ROMAN[d.stage]||d.stage}`).join(' · ')||'ninguno en esta temporada'}. FECOTEME solo los incluye en algunos archivos.</p>`;
   const pl=MT.who&&mtPlayers().find(a=>a.carne===MT.who);
-  if(!pl){$('#mq').value=MT.who?'':$('#mq').value;MT.who='';body.innerHTML=`<div class="pempty">${st.length?'Escriba el nombre de un jugador para ver sus partidos.':'No hay partidos con estos filtros.'}</div>${avail}`;return}
+  if(!pl){if(MT.who)$('#mq').value='';MT.who='';body.innerHTML=`<div class="pempty">${st.length?'Escriba el nombre de un jugador para ver sus partidos.':'No hay partidos con estos filtros.'}</div>${avail}`;return}
   $('#mq').value=pl.name;
-  const L=mtPlayerMatches(MT.who),W=L.filter(x=>x.won).length,sw=L.reduce((s,x)=>s+x.sw,0),sl=L.reduce((s,x)=>s+x.sl,0);
+  const S=mtPlayerStages(MT.who),L=S.flatMap(s=>s.rows.filter(r=>!r.bye)),W=L.filter(x=>x.won).length,sw=L.reduce((s,x)=>s+x.sw,0),sl=L.reduce((s,x)=>s+x.sl,0),T=S.reduce((s,x)=>s+x.total,0);
   let h=`<div class="pctl"><span class="summary" style="margin-left:0"><b>${esc(pl.name)}</b> · ${esc(pl.club)} · carné ${esc(pl.carne)}</span><button class="chip" data-mtplayer="${esc(pl.carne)}">Ver en Jugador</button><button class="chip pdfbtn" data-pdf="matches">Descargar PDF</button></div>
-    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+    <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
       <div class="card"><b>${L.length}</b><span>Partidos</span></div><div class="card"><b style="color:var(--up)">${W}</b><span>Ganados</span></div>
       <div class="card"><b style="color:var(--down)">${L.length-W}</b><span>Perdidos</span></div><div class="card"><b>${L.length?Math.round(100*W/L.length):0}%</b><span>Victorias</span></div>
-      <div class="card"><b>${sw}–${sl}</b><span>Sets</span></div></div>`;
-  let cur='';
-  h+='<div class="tblwrap ptable"><table class="mtable"><thead><tr><th>Ronda</th><th>Rival</th><th class="num">Resultado</th><th>Parciales</th></tr></thead><tbody>';
-  for(const x of L){
-    const key=x.d.id;
-    if(key!==cur){cur=key;h+=`<tr class="grp"><td colspan="4"><b>${esc(seriesName(x.d))} · Etapa ${ROMAN[x.d.stage]||x.d.stage}</b>${x.date?` · ${esc(new Date(x.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'}))}`:''}</td></tr>`}
-    const r=x.d._map.get(x.op[0]);
-    h+=`<tr><td>${esc(x.round)}</td><td class="name"><button class="linkbtn" data-mwho="${esc(x.op[0])}">${esc(titleCase(x.op[1]))}</button> <small class="club">${esc(clubName(x.op[2]))}${r?` · #${r[0]}`:''}</small></td>
-      <td class="num"><span class="mres ${x.won?'w':'l'}">${x.won?'G':'P'}</span> ${x.sw}–${x.sl}</td><td class="sets">${x.sets.map(([a,b])=>`<span class="${a>b?'sw':'sl'}">${a}-${b}</span>`).join(' ')}</td></tr>`;
+      <div class="card"><b>${sw}–${sl}</b><span>Sets</span></div><div class="card"><b style="color:${T>0?'var(--up)':T<0?'var(--down)':'inherit'}">${sgn(T)}</b><span>Puntos</span></div></div>`;
+  h+='<div class="tblwrap ptable"><table class="mtable"><thead><tr><th>Ronda</th><th>Rival</th><th class="num">Resultado</th><th>Parciales</th><th class="num">Puntos</th></tr></thead><tbody>';
+  for(const s of S){
+    h+=`<tr class="grp"><td colspan="5"><b>${esc(seriesName(s.d))} · Etapa ${ROMAN[s.d.stage]||s.d.stage}</b>${s.date?` · ${esc(new Date(s.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'}))}`:''}${s.entry!=null?` · empezó con ${s.entry} puntos`:''}</td></tr>`;
+    for(const x of s.rows){
+      if(x.bye){h+=`<tr><td>${esc(x.round)}</td><td class="club">BYE (pasa directo)</td><td class="num"><span class="mres w">G</span> BYE</td><td></td><td class="num">${ptsCell(x.pts)}</td></tr>`;continue}
+      const r=s.d._map.get(x.op[0]),oe=mtEntry(s.d,x.op[0]);
+      h+=`<tr><td>${esc(x.round)}</td><td class="name"><button class="linkbtn" data-mwho="${esc(x.op[0])}">${esc(titleCase(x.op[1]))}</button> <small class="club">${esc(clubName(x.op[2]))}${oe!=null?` · ${oe} pts`:''}</small></td>
+        <td class="num"><span class="mres ${x.won?'w':'l'}">${x.won?'G':'P'}</span> ${x.sw}–${x.sl}</td><td class="sets">${x.sets.map(([a,b])=>`<span class="${a>b?'sw':'sl'}">${a}-${b}</span>`).join(' ')}</td><td class="num">${ptsCell(x.pts)}</td></tr>`;
+    }
+    for(const b of s.bonus)h+=`<tr class="bonus"><td colspan="4">${esc(b.label)}${b.pts>0?' (bonificación)':''}</td><td class="num">${ptsCell(b.pts)}</td></tr>`;
+    const calc=s.entry!=null?s.entry+s.total:null,match=calc!=null&&s.official!=null&&calc===s.official;
+    h+=`<tr class="tot"><td colspan="4"><b>Total de la etapa</b>${s.entry!=null&&s.official!=null?` <small class="club">· ${s.entry} → ${s.official} en el ranking oficial${match?' ✓':` (FECOTEME registró ${sgn(s.official-s.entry)})`}</small>`:''}${s.model==='A'?' <small class="club">· en esta etapa solo cuenta la llave</small>':''}</td><td class="num"><b>${ptsCell(s.total)}</b></td></tr>`;
   }
-  h+='</tbody></table></div><p class="note">G = ganado, P = perdido. Parciales desde el punto de vista del jugador; #: posición del rival en el ranking de esa etapa. Toque un rival para ver sus partidos.</p>'+avail;
+  h+=`</tbody></table></div><p class="note">G = ganado, P = perdido. Parciales desde el punto de vista del jugador. Puntos según la tabla de FECOTEME (ver Calculadora), con los puntos que cada jugador tenía al empezar la etapa: BYE +10; campeón +20, subcampeón +15, semifinalistas +10, cuartos de final +5. En algunas etapas FECOTEME solo cuenta los partidos de la llave y resta 20 a quien no llega a ella; la página usa la forma que coincide con el ranking oficial. Toque un rival para ver sus partidos.</p>`+avail;
   body.innerHTML=h;
 }
 async function mtStart(){await mtLoad();if(!MT.season){const s=mtDocs().map(d=>d.season);MT.season=s.length?Math.max(...s):''}mtRender()}
@@ -1810,10 +1867,16 @@ $('#view-matches').addEventListener('click',e=>{
 document.addEventListener('click',e=>{if(!e.target.closest('.mwho'))$('#msugg').hidden=true});
 async function pdfMatches(){
   const pl=mtPlayers().find(a=>a.carne===MT.who);if(!pl)return;
-  const L=mtPlayerMatches(MT.who),W=L.filter(x=>x.won).length;
-  const doc=await newPdf(`Partidos · ${pl.name}`,`${pl.club} · Temporada ${MT.season}${MT.div?' · '+MT.div:''}${MT.gender?' · '+GENDER[MT.gender]:''} · ${L.length} partidos, ${W} ganados, ${L.length-W} perdidos`);
-  doc.autoTable({...tableStyle,startY:doc._startY,head:[['Etapa','Ronda','Rival','Club','Resultado','Parciales']],
-    body:L.map(x=>[`${seriesName(x.d)} · ${ROMAN[x.d.stage]||x.d.stage}`,x.round,titleCase(x.op[1]),clubName(x.op[2]),`${x.won?'Ganó':'Perdió'} ${x.sw}-${x.sl}`,x.sets.map(([a,b])=>a+'-'+b).join(', ')])});
+  const S=mtPlayerStages(MT.who),L=S.flatMap(s=>s.rows.filter(r=>!r.bye)),W=L.filter(x=>x.won).length,T=S.reduce((s,x)=>s+x.total,0);
+  const doc=await newPdf(`Partidos · ${pl.name}`,`${pl.club} · Temporada ${MT.season}${MT.div?' · '+MT.div:''}${MT.gender?' · '+GENDER[MT.gender]:''} · ${L.length} partidos, ${W} ganados, ${L.length-W} perdidos · ${sgn(T)} puntos`);
+  const body=[];
+  for(const s of S){
+    body.push([{content:`${seriesName(s.d)} · Etapa ${ROMAN[s.d.stage]||s.d.stage}${s.entry!=null?` · empezó con ${s.entry} puntos`:''}`,colSpan:6,styles:{fontStyle:'bold',fillColor:[232,238,248]}}]);
+    for(const x of s.rows)body.push(x.bye?[x.round,'BYE','','Pasa directo','',sgn(x.pts)]:[x.round,titleCase(x.op[1]),clubName(x.op[2]),`${x.won?'Ganó':'Perdió'} ${x.sw}-${x.sl}`,x.sets.map(([a,b])=>a+'-'+b).join(', '),sgn(x.pts)]);
+    for(const b of s.bonus)body.push([{content:b.label,colSpan:5},sgn(b.pts)]);
+    body.push([{content:`Total de la etapa${s.entry!=null&&s.official!=null?` (ranking oficial: ${s.entry} → ${s.official})`:''}`,colSpan:5,styles:{fontStyle:'bold'}},{content:sgn(s.total),styles:{fontStyle:'bold'}}]);
+  }
+  doc.autoTable({...tableStyle,startY:doc._startY,head:[['Ronda','Rival','Club','Resultado','Parciales','Puntos']],body,columnStyles:{5:{halign:'right'}}});
   pdfFooters(doc);doc.save(pdfName(['partidos',pl.name,MT.season]));
 }
 function showTab(name){
