@@ -1762,18 +1762,23 @@ function mtFilters(){
    ranking for more players. */
 const MT_BONUS={Final:[20,15],Semifinal:[0,10],Cuartos:[0,5]};
 const MT_BONUS_LABEL={Final:['Campeón','Subcampeón'],Semifinal:['','Semifinalista'],Cuartos:['','Cuartos de final']};
-function mtEntry(d,carne){
+// Points at the start of the stage. 'sheet': as listed on the group sheets. 'base': players who weren't in the
+// previous stage of this ranking start from that stage's base score (the group sheets sometimes show another value,
+// e.g. 435 or 1000, for newcomers).
+function mtEntry(d,carne,rule='sheet'){
+  const prev=d._prev&&d._prev.season===d.season?d._prev:null;
+  if(rule==='base'&&prev){const r=prev._map.get(carne);if(r)return r[4];if(prev._base!=null)return prev._base}
   const p=MT.data[d.id]?.pts?.[carne];if(p!=null)return p;
   const r=d._map.get(carne);if(!r)return null;const pp=prevPoints(d,r);return pp?pp.v:null;
 }
-function mtCompute(d,model){
+function mtCompute(d,model,rule){
   // -> Map(carne -> {items:[{m,pts}], bonus:[{label,pts}], total})
   const P=new Map(),get=c=>{if(!P.has(c))P.set(c,{items:[],bonus:[],total:0,ko:false});return P.get(c)};
   for(const m of mtM(d)){
     if(m.bye){const x=get(m.a[0]);x.ko=true;x.items.push({m,pts:10});x.total+=10;continue}
     const ko=m.r!=='Grupo',A=get(m.a[0]),B=get(m.b[0]);if(ko){A.ko=B.ko=true}
     const [W,L]=m.w===0?[m.a[0],m.b[0]]:[m.b[0],m.a[0]];
-    const pw=mtEntry(d,W),pl=mtEntry(d,L);
+    const pw=mtEntry(d,W,rule),pl=mtEntry(d,L,rule);
     let g=null,l=null;
     if((ko||model==='B')&&pw!=null&&pl!=null){const r=matchPoints(pw,pl);g=r.gain;l=-r.loss}
     get(W).items.push({m,pts:g});get(L).items.push({m,pts:l});get(W).total+=g||0;get(L).total+=l||0;
@@ -1786,10 +1791,10 @@ function mtCompute(d,model){
 function mtModel(d){
   if(MT.model.has(d.id))return MT.model.get(d.id);
   let best=null;
-  for(const model of ['B','A']){
-    const P=mtCompute(d,model);let ok=0;
-    for(const [c,x] of P){const e=mtEntry(d,c),r=d._map.get(c);if(e!=null&&r&&e+x.total===r[4])ok++}
-    if(!best||ok>best.ok)best={model,ok,P};
+  for(const model of ['B','A'])for(const rule of ['sheet','base']){
+    const P=mtCompute(d,model,rule);let ok=0;
+    for(const [c,x] of P){const e=mtEntry(d,c,rule),r=d._map.get(c);if(e!=null&&r&&e+x.total===r[4])ok++}
+    if(!best||ok>best.ok)best={model,rule,ok,n:P.size,P};
   }
   MT.model.set(d.id,best);return best;
 }
@@ -1805,8 +1810,8 @@ function mtPlayerStages(carne){
       const side=m.a[0]===carne?0:1,op=side?m.a:m.b,sets=m.s.map(([x,y])=>side?[y,x]:[x,y]);
       rows.push({round:m.r==='Grupo'?`Grupo ${m.g??''}`.trim():m.r,ko:m.r!=='Grupo',op,sets,won:m.w===side,sw:sets.filter(([x,y])=>x>y).length,sl:sets.filter(([x,y])=>y>x).length,pts:it.pts});
     }
-    const entry=mtEntry(d,carne),r=d._map.get(carne),date=mtM(d).find(m=>m.d)?.d;
-    out.push({d,rows,bonus:me.bonus,total:me.total,entry,official:r?r[4]:null,model:md.model,date});
+    const entry=mtEntry(d,carne,md.rule),r=d._map.get(carne),date=mtM(d).find(m=>m.d)?.d;
+    out.push({d,rows,bonus:me.bonus,total:me.total,entry,official:r?r[4]:null,model:md.model,rule:md.rule,date});
   }
   return out;
 }
@@ -1844,7 +1849,7 @@ function mtRender(){
     h+=`<tr class="grp"><td colspan="5"><b>${esc(seriesName(s.d))} · Etapa ${ROMAN[s.d.stage]||s.d.stage}</b>${s.date?` · ${esc(new Date(s.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'}))}`:''}${s.entry!=null?` · empezó con ${s.entry} puntos`:''}</td></tr>`;
     for(const x of s.rows){
       if(x.bye){h+=`<tr><td>${esc(x.round)}</td><td class="club">BYE (pasa directo)</td><td class="num"><span class="mres w">G</span> BYE</td><td></td><td class="num">${ptsCell(x.pts)}</td></tr>`;continue}
-      const r=s.d._map.get(x.op[0]),oe=mtEntry(s.d,x.op[0]);
+      const oe=mtEntry(s.d,x.op[0],s.rule);
       h+=`<tr><td>${esc(x.round)}</td><td class="name"><button class="linkbtn" data-mwho="${esc(x.op[0])}">${esc(titleCase(x.op[1]))}</button> <small class="club">${esc(clubName(x.op[2]))}${oe!=null?` · ${oe} pts`:''}</small></td>
         <td class="num"><span class="mres ${x.won?'w':'l'}">${x.won?'G':'P'}</span> ${x.sw}–${x.sl}</td><td class="sets">${x.sets.map(([a,b])=>`<span class="${a>b?'sw':'sl'}">${a}-${b}</span>`).join(' ')}</td><td class="num">${ptsCell(x.pts)}</td></tr>`;
     }
