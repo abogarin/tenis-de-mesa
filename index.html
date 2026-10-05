@@ -1,0 +1,1633 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ranking Nacional · Tenis de Mesa Curridabat</title>
+<meta name="description" content="Ranking nacional de tenis de mesa de Costa Rica por etapa, categoría y club.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F3F6FB; --surface:#FFFFFF; --surface-2:#E9EFF8; --text:#13213D; --muted:#56637D; --line:#D6DEEB;
+  --table:#2552A8; --table-ink:#FFFFFF; --ball:#356AD4; --ball-soft:#E6EEFB; --red:#C8201D;
+  --up:#1D7F47; --down:#BE3A3A; --up-soft:#E1F3E8; --down-soft:#F8E3E3;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0C1322; --surface:#131D31; --surface-2:#1A2844; --text:#E4EAF5; --muted:#8C9AB4; --line:#26344F;
+    --table:#1D3F82; --table-ink:#FFFFFF; --ball:#7EA3EC; --ball-soft:#1A2A4A; --red:#E0605D;
+    --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0C1322; --surface:#131D31; --surface-2:#1A2844; --text:#E4EAF5; --muted:#8C9AB4; --line:#26344F;
+  --table:#1D3F82; --table-ink:#FFFFFF; --ball:#7EA3EC; --ball-soft:#1A2A4A; --red:#E0605D;
+  --up:#4CC37F; --down:#F07474; --up-soft:#15301F; --down-soft:#361B1D;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+
+/* Header: the table surface with the centre line */
+.hero{background:var(--table);color:var(--table-ink);position:relative;overflow:hidden;border-bottom:3px solid var(--red)}
+.hero::before{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,transparent calc(50% - 1px),rgba(255,255,255,.18) calc(50% - 1px),rgba(255,255,255,.18) calc(50% + 1px),transparent calc(50% + 1px));pointer-events:none}
+.hero::after{content:"";position:absolute;inset:10px;border:2px solid rgba(255,255,255,.22);pointer-events:none}
+.hero-in{position:relative;max-width:1180px;margin:0 auto;padding:28px 32px 24px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:13px;opacity:.8;display:flex;align-items:center;gap:8px}
+.ball{width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block}
+.brand{display:flex;align-items:center;gap:18px}
+.brand img{width:84px;height:84px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #fff,0 4px 14px rgba(0,0,0,.25);flex:none}
+@media(max-width:520px){.brand{gap:12px}.brand img{width:58px;height:58px}}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,54px);line-height:.95;margin:6px 0 0;text-wrap:balance;letter-spacing:.01em}
+.hero-stats{display:flex;gap:28px;flex-wrap:wrap}
+.hs b{display:block;font-family:var(--display);font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.hs span{font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 60px}
+@media(min-width:700px){.wrap{padding-inline:32px}}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap;align-items:flex-end}
+.tab{background:none;border:0;padding:10px 14px;font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:.03em;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--ball)}
+.tabs .spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ball);border-color:var(--ball);color:#fff}
+.btn.danger{color:var(--down);border-color:var(--down)}
+.btn.sm{padding:4px 10px;font-size:13px}
+
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.f label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:4px;font-weight:600}
+.f input,.f select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.f.search{grid-column:span 2}
+@media(max-width:520px){.f.search{grid-column:1/-1}}
+
+.stagebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.stagebar .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--table);border-color:var(--table);color:var(--table-ink)}
+.summary{color:var(--muted);font-size:13px;margin-left:auto}
+
+.tblwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;background:var(--surface);position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.grp td{background:var(--surface-2);font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.03em;padding:8px 12px}
+tr.grp td small{font-family:var(--body);font-size:12px;color:var(--muted);font-weight:500;letter-spacing:0;margin-left:10px}
+tbody tr.row{cursor:pointer}
+tbody tr.row:hover td{background:var(--surface-2)}
+.pos{font-family:var(--display);font-size:20px;font-weight:600;width:56px}
+.pos.top1{color:var(--red)}
+.nextup{color:var(--ball)}
+.filebtn{text-decoration:none;display:inline-block}
+.filebtn:hover,.pdfbtn:hover{background:var(--ball);color:#fff}
+#fileBtns{display:inline-flex}
+.filemenu{position:relative}
+.filemenu summary{list-style:none;cursor:pointer}
+.filemenu summary::-webkit-details-marker{display:none}
+.filelist{position:absolute;right:0;top:calc(100% + 6px);z-index:15;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:220px;max-height:320px;overflow-y:auto}
+.filelist a{display:block;padding:8px 12px;color:var(--text);text-decoration:none;border-bottom:1px solid var(--line);font-size:14px}
+.filelist a:last-child{border-bottom:0}
+.filelist a:hover{background:var(--surface-2)}
+.qform{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px;margin:6px 0 16px}
+.qform3{grid-template-columns:minmax(0,240px) minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.qform3{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.qform,.qform3{grid-template-columns:1fr}}
+.qhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.qhead .pdfbtn{margin-left:auto}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;border-top:4px solid var(--up)}
+.qcard.lose{border-top-color:var(--down)}
+.qcard h3{font-family:var(--display);font-size:22px;margin:0 0 8px}
+.qline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.qline>b{font-family:var(--display);font-size:26px;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.qline>.club{grid-column:1/-1;font-size:13px}
+.qcard.win .qline:first-of-type>b{color:var(--up)}.qcard.lose .qline:first-of-type>b{color:var(--down)}
+.qrules{margin-top:18px}.qrules summary{cursor:pointer;font-weight:600;color:var(--ball)}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px}
+.qrgrid table{min-width:0}
+.pdfbtn{border-color:var(--ball);color:var(--ball)}
+.pdfbtn:disabled{opacity:.6;cursor:wait}
+.kfilters{grid-template-columns:minmax(110px,160px) minmax(140px,220px) minmax(0,1fr)}
+@media(max-width:560px){.kfilters{grid-template-columns:1fr 1fr}.kfilters .search{grid-column:1/-1}}
+.kdetail>td{background:var(--surface-2);white-space:normal;padding:12px}
+.kd-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:8px}
+.kdetail .career td{background:var(--surface);cursor:pointer}
+.kdetail .career tr:hover td{background:var(--bg)}
+.name{font-weight:600;white-space:normal;min-width:180px}
+.club{color:var(--muted)}
+.mv{display:inline-block;min-width:44px;text-align:center;border-radius:6px;padding:1px 6px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.mv.up{color:var(--up);background:var(--up-soft)}
+.mv.down{color:var(--down);background:var(--down-soft)}
+.mv.eq{color:var(--muted)}
+.mv.new{color:var(--ball);background:var(--ball-soft)}
+.pts{font-weight:600}
+.dpts{color:var(--up);font-size:13px}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.more{display:flex;justify-content:center;padding:12px}
+
+/* Drawer */
+.scrim{position:fixed;inset:0;background:rgba(8,14,26,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--surface);z-index:21;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.2);padding:calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 30px)}
+.drawer h2{font-family:var(--display);font-size:30px;line-height:1;margin:4px 0 6px;text-wrap:balance}
+.drawer .meta{color:var(--muted);font-size:14px}
+.xbtn{float:right;border:0;background:var(--surface-2);width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px}
+.card b{display:block;font-family:var(--display);font-size:26px;line-height:1.05;font-variant-numeric:tabular-nums}
+.card span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.series h3{font-family:var(--display);font-size:19px;margin:22px 0 8px;letter-spacing:.02em}
+.chart{width:100%;height:auto;display:block}
+.hist{width:100%;border-collapse:collapse;min-width:0;margin-top:8px}
+.hist th,.hist td{padding:6px 8px;font-size:14px}
+
+/* Stages tab */
+.stages{display:grid;gap:10px}
+.stg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.stg .t{font-family:var(--display);font-size:19px;font-weight:600}
+.stg .d{color:var(--muted);font-size:13px}
+.stg .act{margin-left:auto;display:flex;gap:6px}
+.tag{display:inline-block;font-size:12px;font-weight:600;border-radius:5px;padding:1px 7px;background:var(--surface-2);color:var(--muted)}
+
+/* Upload panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.panel h3{font-family:var(--display);font-size:22px;margin:0 0 4px}
+.panel p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop.over{border-color:var(--ball);color:var(--text)}
+.uform{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+.msg{font-size:14px;margin-top:10px}
+.msg.err{color:var(--down)}
+.msg.ok{color:var(--up)}
+.note{font-size:13px;color:var(--muted);margin-top:18px}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
+@media(max-width:520px){.hero-in{padding:24px 20px 20px}.hero-stats{display:grid;grid-template-columns:repeat(4,auto);gap:14px;width:100%;justify-content:space-between}.hs b{font-size:24px}.hs span{font-size:10px;letter-spacing:.05em}.cards{grid-template-columns:repeat(3,1fr)}.card b{font-size:22px}}
+
+.seasonsel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.sep{width:1px;height:22px;background:var(--line);margin:0 6px}
+.pct{font-size:12px;color:var(--muted)}
+.career{width:100%;border-collapse:collapse;min-width:0}
+.career th,.career td{padding:6px 8px;font-size:14px}
+.career tr.season td{background:var(--surface-2);font-family:var(--display);font-size:16px;font-weight:600;letter-spacing:.03em}
+.yoy{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0 4px}
+.yoy .card b{font-size:20px;line-height:1.15}
+footer.src{max-width:1180px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:13px}
+footer.src a{color:inherit}
+@media(min-width:700px){footer.src{padding-inline:32px}}
+/* Compare tab */
+.cbar{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,320px);gap:10px;margin-bottom:10px}
+.cslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media(max-width:700px){.cslots{grid-template-columns:1fr}.cbar{grid-template-columns:1fr 2fr}}
+.cslots .f label::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--slot)}
+.cslots .f:nth-child(1){--slot:var(--s1)}.cslots .f:nth-child(2){--slot:var(--s2)}.cslots .f:nth-child(3){--slot:var(--s3)}
+.cclear{position:absolute;right:8px;top:27px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px}
+.ctable td b{font-variant-numeric:tabular-nums}
+.ptable.ctable table{min-width:0}
+@media(max-width:560px){.ptable.ctable th,.ptable.ctable td{padding:7px 6px;font-size:13px;white-space:normal;letter-spacing:.02em}}
+.ctable .win{color:var(--up);font-weight:700}
+/* Player tab */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#4a3aa7;--s8:#e34948}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767}
+.pbar{display:grid;grid-template-columns:minmax(0,2fr) minmax(120px,160px);gap:10px;align-items:end;margin-bottom:14px}
+@media(max-width:560px){.pbar{grid-template-columns:1fr}}
+.psearch{position:relative}
+.sugg{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:320px;overflow-y:auto}
+.sugg button{display:flex;width:100%;text-align:left;gap:10px;justify-content:space-between;background:none;border:0;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.sugg button:last-child{border-bottom:0}
+.sugg button:hover,.sugg button:focus-visible,.sugg button.act{background:var(--surface-2)}
+.sugg small{color:var(--muted)}
+.phead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:6px 0 14px}
+.phead h2{font-family:var(--display);font-size:32px;line-height:1;margin:0}
+.phead .meta{color:var(--muted)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 10px}
+.pctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.pctl .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin-right:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 6px;font-size:13px;color:var(--text)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:16px;height:2px;border-radius:1px}
+.pchart{position:relative}
+.pchart svg{display:block;width:100%;height:auto;overflow:visible}
+.ptip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.14);min-width:170px;z-index:5}
+.ptip .h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:4px}
+.ptip .r{display:flex;align-items:center;gap:8px;white-space:nowrap;line-height:1.6}
+.ptip .r i{width:12px;height:2px;border-radius:1px;flex:none}
+.ptip .r b{font-variant-numeric:tabular-nums;min-width:52px}
+.ptip .r span{color:var(--muted)}
+.inactive{margin-top:10px;font-size:13px;color:var(--muted)}
+.ptable{margin-top:16px}
+.ptable table{min-width:520px}
+.ptable td.num small{color:var(--muted)}
+.pempty{padding:34px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
+/* Asistencia */
+.attbox{max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.attbox h2{font-family:var(--display);font-size:28px;margin:0 0 6px}
+.attform{display:grid;gap:10px;margin-top:12px}
+.attform input,.attadd input,.attadd select,.attfilters input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.attactions{display:flex;gap:8px;flex-wrap:wrap}
+.msg{min-height:1.2em;margin:0;font-size:14px}.msg.err{color:var(--down)}.msg.ok{color:var(--up)}
+.atthead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.atthead b{font-family:var(--display);font-size:22px}
+.attfilters{display:grid;grid-template-columns:minmax(140px,180px) minmax(0,1fr);gap:10px;margin-bottom:10px}
+.attfilters4{grid-template-columns:minmax(130px,160px) minmax(130px,160px) minmax(0,1fr) minmax(0,260px)}
+@media(max-width:700px){.attfilters,.attfilters4{grid-template-columns:1fr 1fr}.attfilters .f:has(.catpick){grid-column:1/-1}}
+.attbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.attadd{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,200px) auto;gap:10px;align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:10px}
+@media(max-width:600px){.attadd{grid-template-columns:1fr}}
+.catpick{position:relative}
+.catpick summary{list-style:none;cursor:pointer;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catpick summary::-webkit-details-marker{display:none}
+.catpick summary::after{content:"▾";float:right;color:var(--muted)}
+.catlist{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:12;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:2px;max-height:320px;overflow:auto}
+.catlist label{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:14px;text-transform:none;letter-spacing:0;color:var(--text);font-weight:500;margin:0}
+.catlist input{width:auto;padding:0;margin:0;flex:none;border:0;accent-color:var(--ball)}
+.catlist label:hover{background:var(--surface-2)}
+.catlist .catall{grid-column:1/-1;border-bottom:1px solid var(--line);border-radius:0;font-weight:700}
+.attgrp{font-family:var(--display);font-size:18px;font-weight:600;margin:14px 0 6px}
+.attrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.attrow .nm{font-weight:600}.attrow .nm small{font-weight:400;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 12px;font-weight:700;cursor:pointer;min-width:44px;border-left:1px solid var(--line);color:var(--muted)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"][data-st="P"]{background:var(--up);color:#fff}
+.seg button[aria-pressed="true"][data-st="A"]{background:var(--down);color:#fff}
+.seg button[aria-pressed="true"][data-st="J"]{background:var(--muted);color:#fff}
+.seg button[aria-pressed="true"][data-st="T"]{background:#C98500;color:#fff}
+@media(max-width:480px){.attrow{grid-template-columns:1fr}.seg{width:100%}.seg button{flex:1;padding:10px 2px;min-width:0;font-size:13px}}
+.attcancelled{background:var(--surface-2);border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted);text-align:center;margin-bottom:10px}
+.stcell{display:inline-block;min-width:26px;text-align:center;border-radius:5px;padding:1px 6px;font-weight:700;font-size:12px;color:#fff}
+.stcell.P{background:var(--up)}.stcell.A{background:var(--down)}.stcell.J{background:var(--muted)}.stcell.T{background:#C98500}
+.pctchip{font-weight:700;border-radius:6px;padding:1px 7px}
+.pctchip.lo{background:var(--down-soft);color:var(--down)}.pctchip.hi{background:var(--up-soft);color:var(--up)}
+.strip{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.strip .day{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);min-width:42px}
+.strip .sq{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.strip .sq.P{background:var(--up)}.strip .sq.A{background:var(--down)}.strip .sq.J{background:var(--muted)}.strip .sq.T{background:#C98500}
+
+.attside{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.attside>.pcard{min-width:0}
+@media(max-width:760px){.attside{grid-template-columns:1fr}}
+.atth3{font-family:var(--display);margin:0 0 4px}
+.rkcards{grid-template-columns:repeat(3,1fr);margin:8px 0}
+.rkcards .card b .mv{font-size:20px;font-family:var(--display);padding:0 8px}
+.rkcards .card span em.mv{font-style:normal;font-size:11px;min-width:0;letter-spacing:0;text-transform:none}
+#attReport .ptable table{min-width:0}
+#attWhoSel{width:100%}
+.rktbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.rktbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line)}
+.rktbl td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.rktbl .num{text-align:right}
+.rktbl small{color:var(--muted)}
+.attlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:6px 0}
+</style>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <div class="brand">
+      <img src="logo.png" alt="Tenis de Mesa Curridabat" width="84" height="84">
+      <div>
+        <div class="eyebrow"><span class="ball"></span> Tenis de Mesa Curridabat</div>
+        <h1>Ranking Nacional</h1>
+      </div>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-rank" aria-selected="true" data-tab="rank">Ranking</button>
+    <button class="tab" role="tab" id="tab-player" aria-selected="false" data-tab="player">Jugador</button>
+    <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Comparar</button>
+    <button class="tab" role="tab" id="tab-calc" aria-selected="false" data-tab="calc">Calculadora</button>
+    <button class="tab" role="tab" id="tab-att" aria-selected="false" data-tab="att">Asistencia 🔒</button>
+    <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs" hidden>Clubes</button>
+    <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages" hidden>Historial de etapas</button>
+  </div>
+
+  <section id="view-rank">
+    <div class="filters">
+      <div class="f search"><label for="fq">Atleta o carné</label><input id="fq" type="search" placeholder="Buscar por nombre o número de carné"></div>
+      <div class="f"><label for="fseason">Temporada</label><select id="fseason"></select></div>
+      <div class="f"><label for="fcircuit">Circuito</label><select id="fcircuit"></select></div>
+      <div class="f"><label for="fdiv">Categoría</label><select id="fdiv"></select></div>
+      <div class="f"><label for="fgender">Género</label><select id="fgender"></select></div>
+      <div class="f"><label for="fclub">Equipo / club</label><input id="fclub" list="clubList" type="search" autocomplete="off" placeholder="Todos · escriba el club"><datalist id="clubList"></datalist></div>
+    </div>
+    <div class="stagebar" id="stagebar"></div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr id="rankHead">
+          <th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num" title="Puntos ganados desde la etapa anterior. En la primera etapa del año, o la primera vez que aparece el jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090.">+Pts</th><th class="num">Carné</th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="7" class="empty">Cargando ranking…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="more" id="more" hidden><button class="btn" id="moreBtn">Mostrar más</button></div>
+    <p class="note"><span id="updated"></span> Mov. compara la posición con la etapa anterior de la misma categoría (en la primera etapa del año, con el cierre de la temporada anterior). +Pts: puntos ganados desde la etapa anterior; en la primera etapa del año, o la primera vez que aparece un jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090. Toque a un atleta para ver su historial completo.</p>
+  </section>
+
+  <section id="view-player" hidden>
+    <div class="pbar">
+      <div class="f psearch"><label for="pq">Jugador</label>
+        <input id="pq" type="search" autocomplete="off" placeholder="Escriba nombre o carné" aria-autocomplete="list" aria-controls="psugg">
+        <div class="sugg" id="psugg" role="listbox" hidden></div>
+      </div>
+      <div class="f"><label for="pseason">Temporada</label><select id="pseason"></select></div>
+    </div>
+    <div id="pbody"><div class="pempty">Busque un jugador para ver su evolución en todos los rankings donde compite.</div></div>
+  </section>
+
+  <section id="view-compare" hidden>
+    <div class="cbar">
+      <div class="f"><label for="cseason">Temporada</label><select id="cseason"></select></div>
+      <div class="f"><label for="ccat">Ranking</label><select id="ccat"></select></div>
+    </div>
+    <div class="cslots">
+      <div class="f psearch"><label for="cq0">Jugador 1</label><input id="cq0" data-slot="0" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg0" hidden></div></div>
+      <div class="f psearch"><label for="cq1">Jugador 2</label><input id="cq1" data-slot="1" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg1" hidden></div></div>
+      <div class="f psearch"><label for="cq2">Jugador 3 (opcional)</label><input id="cq2" data-slot="2" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="csugg2" hidden></div></div>
+    </div>
+    <div id="cbody"></div>
+  </section>
+
+  <section id="view-calc" hidden>
+    <div class="pctl"><span class="lbl">Calcular</span>
+      <button class="chip" data-qmode="pts" aria-pressed="true">Con puntos</button>
+      <button class="chip" data-qmode="names" aria-pressed="false">Con jugadores</button>
+    </div>
+    <div id="qpts" class="qform">
+      <div class="f"><label for="qa">Mis puntos</label><input id="qa" type="number" inputmode="numeric" placeholder="Ej. 612"></div>
+      <div class="f"><label for="qb">Puntos del rival</label><input id="qb" type="number" inputmode="numeric" placeholder="Ej. 655"></div>
+    </div>
+    <div id="qnames" class="qform qform3" hidden>
+      <p class="note" style="grid-column:1/-1;margin:0">Con los puntos de la última etapa publicada de la temporada <span id="qyear"></span>.</p>
+      <div class="f" hidden><label for="qseason">Temporada</label><select id="qseason"></select></div>
+      <div class="f"><label for="qcat">Ranking</label><select id="qcat"></select></div>
+      <div class="f psearch"><label for="qme">Jugador</label><input id="qme" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg1" hidden></div></div>
+      <div class="f psearch"><label for="qrival">Rival</label><input id="qrival" type="search" autocomplete="off" placeholder="Nombre o carné"><div class="sugg" id="qsugg2" hidden></div></div>
+    </div>
+    <div id="qout"></div>
+    <details class="qrules"><summary>Reglas de puntuación (FECOTEME)</summary>
+      <div class="qrgrid">
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="3">Gana el favorito (más puntos)</th></tr><tr><th>Diferencia</th><th class="num">Ganador</th><th class="num">Perdedor</th></tr></thead><tbody>
+          <tr><td>1 – 50</td><td class="num">+8</td><td class="num">−5</td></tr><tr><td>51 – 100</td><td class="num">+6</td><td class="num">−4</td></tr><tr><td>101 – 250</td><td class="num">+4</td><td class="num">−3</td></tr><tr><td>251 – 500</td><td class="num">+3</td><td class="num">−2</td></tr><tr><td>501 – 1000</td><td class="num">+2</td><td class="num">−1</td></tr><tr><td>1001 o más</td><td class="num">0</td><td class="num">0</td></tr></tbody></table></div>
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="3">Gana el de menos puntos (o empatados)</th></tr><tr><th>Diferencia</th><th class="num">Ganador</th><th class="num">Perdedor</th></tr></thead><tbody>
+          <tr><td>0 – 100</td><td class="num">+10</td><td class="num">−5</td></tr><tr><td>101 – 250</td><td class="num">+15</td><td class="num">−8</td></tr><tr><td>251 – 500</td><td class="num">+20</td><td class="num">−10</td></tr><tr><td>501 – 1000</td><td class="num">+25</td><td class="num">−15</td></tr><tr><td>1001 o más</td><td class="num">+30</td><td class="num">−20</td></tr></tbody></table></div>
+        <div class="tblwrap"><table class="career"><thead><tr><th colspan="2">Otras bonificaciones</th></tr></thead><tbody>
+          <tr><td>Campeón</td><td class="num">+20</td></tr><tr><td>Subcampeón</td><td class="num">+15</td></tr><tr><td>3.º y 4.º lugar</td><td class="num">+10</td></tr><tr><td>5.º a 8.º lugar</td><td class="num">+5</td></tr><tr><td>BYE</td><td class="num">+10</td></tr><tr><td>No participar (todas las categorías)</td><td class="num">−20</td></tr></tbody></table></div>
+      </div>
+      <p class="note">Fuente: <a href="https://fecoteme.com/calculadora/" rel="noopener">calculadora oficial de FECOTEME</a>.</p>
+    </details>
+  </section>
+
+  <section id="view-att" hidden>
+    <div id="attLogin" class="attbox" hidden>
+      <h2>Asistencia a entrenamientos</h2>
+      <p class="club">Sección privada para entrenadores. Ingrese con su correo y contraseña.</p>
+      <form id="attLoginForm" class="attform" autocomplete="on">
+        <div class="f"><label for="attEmail">Correo</label><input id="attEmail" type="email" autocomplete="username" required></div>
+        <div class="f"><label for="attPass">Contraseña</label><input id="attPass" type="password" autocomplete="current-password" required></div>
+        <div class="attactions"><button class="btn primary" type="submit" id="attLoginBtn">Ingresar</button><button class="btn" type="button" id="attForgot">Olvidé mi contraseña</button></div>
+        <p class="msg" id="attLoginMsg"></p>
+      </form>
+    </div>
+    <div id="attSetup" class="attbox" hidden>
+      <h2>Asistencia a entrenamientos</h2>
+      <p>Esta sección todavía no está conectada a Firebase. Complete el archivo <code>site/firebase-config.js</code> siguiendo las instrucciones del README.</p>
+    </div>
+    <div id="attApp" hidden>
+      <div class="atthead"><div><b id="attClub"></b> <span class="club" id="attWho"></span></div>
+        <div class="pctl" style="margin:0"><button class="chip" data-attview="roll" aria-pressed="true">Pasar lista</button><button class="chip" data-attview="report" aria-pressed="false">Reporte</button><button class="chip" id="attLogout">Salir</button></div></div>
+      <div id="attRoll">
+        <div class="attfilters">
+          <div class="f"><label for="attDate">Fecha</label><input id="attDate" type="date"></div>
+          <div class="f"><label>Categorías</label><div class="catpick" id="catpickRoll"></div></div>
+        </div>
+        <div class="attbar"><span id="attCounts" class="summary" style="margin-left:0"></span>
+          <button class="chip" id="attAllPresent">Marcar sin marcar como presentes</button>
+          <button class="chip" id="attCancel" aria-pressed="false">Sesión cancelada</button>
+          <button class="chip" id="attAddAthlete">+ Agregar atleta</button>
+          <span id="attSaved" class="club"></span></div>
+        <div id="attAddForm" class="attadd" hidden>
+          <div class="f"><label for="attNewName">Nombre del atleta</label><input id="attNewName" type="text" placeholder="Nombre y apellidos"></div>
+          <div class="f"><label for="attNewCat">Categoría</label><select id="attNewCat"></select></div>
+          <div class="attactions"><button class="btn primary" id="attNewSave" type="button">Agregar</button><button class="btn" id="attNewCancel" type="button">Cancelar</button></div>
+        </div>
+        <div id="attList"></div>
+      </div>
+      <div id="attReport" hidden>
+        <div class="attfilters attfilters4">
+          <div class="f"><label for="attFrom">Desde</label><input id="attFrom" type="date"></div>
+          <div class="f"><label for="attTo">Hasta</label><input id="attTo" type="date"></div>
+          <div class="f"><label>Categorías</label><div class="catpick" id="catpickRep"></div></div>
+          <div class="f"><label for="attWhoSel">Atleta</label><select id="attWhoSel"></select></div>
+        </div>
+        <div id="attRepBody"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-clubs" hidden>
+    <div class="filters kfilters">
+      <div class="f"><label for="kseason">Temporada</label><select id="kseason"></select></div>
+      <div class="f"><label for="kcircuit">Circuito</label><select id="kcircuit"></select></div>
+      <div class="f search"><label for="kq">Club</label><input id="kq" type="search" autocomplete="off" placeholder="Buscar club"></div>
+    </div>
+    <div class="stagebar"><span class="summary" id="ksummary" style="margin-left:0"></span><button class="chip pdfbtn" data-pdf="clubs">Descargar PDF</button></div>
+    <div class="tblwrap"><table><thead><tr><th class="num">#</th><th>Club</th><th class="num">Jugadores</th><th class="num" title="Posiciones 1 a 3 en la última etapa de cada ranking">Top 3</th><th class="num" title="Posiciones 1 a 10 en la última etapa de cada ranking">Top 10</th><th>Mejor resultado</th></tr></thead><tbody id="kbody"></tbody></table></div>
+    <p class="note">Cuenta los jugadores con resultados en la última etapa publicada de cada ranking (sin los que están en el puntaje base). Un jugador en varios rankings suma en cada uno para Top 3 y Top 10. Toque un club para ver sus jugadores.</p>
+  </section>
+
+  <section id="view-stages" hidden>
+    <div class="stages" id="stagesList"></div>
+  </section>
+</main>
+<footer class="src">Fuente de datos: resultados oficiales publicados por <a href="https://fecoteme.com/ranking-nacional-2026/" rel="noopener">FECOTEME</a>. Sitio no oficial.</footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Detalle del atleta"></aside>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+const GENDER={M:'Masculino',F:'Femenino',X:'Mixto'};
+const CIRCUIT_ORDER=['Liga Menor','Liga Mayor','Open Femenino','Master','PTT'];
+const LOWER=new Set(['de','del','la','las','los','y','da','van','von']);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fold=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function titleCase(s){return String(s||'').toLowerCase().split(/\s+/).filter(Boolean).map((w,i)=>i>0&&LOWER.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1)).join(' ')}
+const clubName=c=>{c=String(c||'').trim();return c.length<=1?(c||'—'):titleCase(c).replace(/^Ccdr\b/,'CCDR').replace(/\bCcdr\b/,'CCDR')};
+const MAYOR_DIVS=['Primera','Segunda','Tercera','Cuarta','Quinta','Sexta'];
+function divRank(d){const m=/^U(\d+)/.exec(d);if(m)return +m[1];const i=MAYOR_DIVS.indexOf(d);if(i>=0)return 40+i;return {'Mayor':50,'Open A':60,'Open B':61,'Open':62}[d]??(d.startsWith('Master')?70+(parseInt(d.slice(7))||0)/100:d.startsWith('PTT')?90:80)}
+const circRank=c=>{const i=CIRCUIT_ORDER.indexOf(c);return i<0?99:i};
+const catKey=d=>[d.circuit,d.division,d.gender].join('|');      // same category, any season
+const groupKey=d=>d.season+'|'+catKey(d);                         // one ranking list
+const groupLabel=d=>(d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(d.division)?'Mayor · ':'')+d.division+(d.gender==='X'||d.circuit==='Open Femenino'?'':' '+(GENDER[d.gender]||d.gender));
+const stageLabel=d=>`Etapa ${ROMAN[d.stage]||d.stage}`;
+const shortStage=d=>`${ROMAN[d.stage]||d.stage}·${String(d.season).slice(2)}`;
+const fmtDate=s=>{if(!s)return '';const d=new Date(s+'T12:00:00');return isNaN(d)?s:d.toLocaleDateString('es-CR',{day:'numeric',month:'short',year:'numeric'})};
+const topPct=(r,n)=>Math.max(1,Math.round(100*r/n));
+const sortGroups=(a,b)=>b.season-a.season||circRank(a.circuit)-circRank(b.circuit)||divRank(a.division)-divRank(b.division)||a.gender.localeCompare(b.gender);
+
+let docs=[], groups=new Map(), byCat=new Map();
+let F={q:'',season:'',circuit:'',div:'',gender:'',club:'',stage:'latest',showBase:false};
+let limit=250;
+try{const s=JSON.parse(localStorage.getItem('rn-filters2')||'null');if(s)Object.assign(F,s,{q:''})}catch(e){}
+const saveF=()=>{try{localStorage.setItem('rn-filters2',JSON.stringify({...F,q:''}))}catch(e){}};
+
+function index(){
+  groups=new Map();byCat=new Map();
+  for(const d of docs){
+    d._map=new Map(d.rows.map(r=>[r[1],r]));
+    const k=groupKey(d);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(d);
+    const c=catKey(d);if(!byCat.has(c))byCat.set(c,[]);byCat.get(c).push(d);
+  }
+  for(const arr of byCat.values()){
+    arr.sort((a,b)=>a.season-b.season||a.stage-b.stage);
+    arr.forEach((d,i)=>{d._prev=arr[i-1]||null});   // previous stage, or last stage of the previous season
+  }
+  for(const arr of groups.values())arr.sort((a,b)=>a.stage-b.stage);
+  // Base score: the value most players share without results (it drops each stage). Hidden by default.
+  divAt=new Map();ptsAt=new Map();stageSeq=new Map();
+  for(const d of docs){
+    const c=new Map();d.rows.forEach(r=>c.set(r[4],(c.get(r[4])||0)+1));
+    let best=null,n=0;c.forEach((v,k)=>{if(v>n){n=v;best=k}});
+    d._base=(n>=20&&n/d.rows.length>=0.3)?best:null;
+    const k=d.season+'|'+d.circuit+'|'+d.gender+'|'+d.stage;if(!divAt.has(k))divAt.set(k,new Map());
+    d.rows.forEach(r=>divAt.get(k).set(r[1],d.division));
+    const ck=d.circuit+'|'+d.gender,sk=ck+'|'+(d.season*100+d.stage);
+    if(!ptsAt.has(sk))ptsAt.set(sk,new Map());d.rows.forEach(r=>ptsAt.get(sk).set(r[1],r[4]));
+    if(!stageSeq.has(ck))stageSeq.set(ck,[]);if(!stageSeq.get(ck).includes(d.season*100+d.stage))stageSeq.get(ck).push(d.season*100+d.stage);
+  }
+  stageSeq.forEach(a=>a.sort((x,y)=>x-y));
+}
+let divAt=new Map(),ptsAt=new Map(),stageSeq=new Map();
+const DIVIDED=new Set(['Liga Mayor','Open Femenino']);
+function divMove(d,r){
+  // Player was in a different division of the same circuit in the previous stage of the season
+  if(!DIVIDED.has(d.circuit))return null;
+  const prevStages=docs.filter(x=>x.season===d.season&&x.circuit===d.circuit&&x.gender===d.gender&&x.stage<d.stage).map(x=>x.stage);
+  if(!prevStages.length)return null;
+  const pd=divAt.get(d.season+'|'+d.circuit+'|'+d.gender+'|'+Math.max(...prevStages))?.get(r[1]);
+  if(!pd||pd===d.division)return null;
+  return {up:divRank(pd)>divRank(d.division),from:pd.replace(/^Open /,'')};
+}
+const uniq=fn=>[...new Set(docs.map(fn).filter(v=>v!==''&&v!=null))];
+function fillSelect(el,values,cur,allLabel,labelFn=v=>v){
+  el.innerHTML=(allLabel?`<option value="">${allLabel}</option>`:'')+values.map(v=>`<option value="${esc(v)}">${esc(labelFn(v))}</option>`).join('');
+  const ok=values.map(String).includes(String(cur));
+  el.value=ok?String(cur):(allLabel?'':String(values[0]??''));
+  return el.value;
+}
+function buildFilters(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  F.season=fillSelect($('#fseason'),seasons,F.season||seasons[0],'');
+  const inSeason=docs.filter(d=>String(d.season)===String(F.season));
+  F.circuit=fillSelect($('#fcircuit'),[...new Set(inSeason.map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b)),F.circuit,'Todos');
+  const inCirc=inSeason.filter(d=>!F.circuit||d.circuit===F.circuit);
+  F.div=fillSelect($('#fdiv'),[...new Set(inCirc.map(d=>d.division))].sort((a,b)=>divRank(a)-divRank(b)),F.div,'Todas');
+  F.gender=fillSelect($('#fgender'),['M','F'],F.gender,'Todos',v=>GENDER[v]||v);
+  const clubs=new Set();inSeason.forEach(d=>d.rows.forEach(r=>clubs.add(clubName(r[3]))));
+  $('#clubList').innerHTML=[...clubs].sort((a,b)=>a.localeCompare(b,'es')).map(c=>`<option value="${esc(c)}">`).join('');
+  $('#fclub').value=F.club||'';
+}
+function visibleGroups(){
+  return [...groups.values()].filter(a=>{const d=a[0];return String(d.season)===String(F.season)&&(!F.circuit||F.circuit===d.circuit)&&(!F.div||F.div===d.division)&&(!F.gender||F.gender===d.gender||d.gender==='X')})
+    .sort((a,b)=>sortGroups(a[0],b[0]));
+}
+function renderStagebar(vg){
+  const nums=[...new Set(vg.flatMap(a=>a.map(d=>d.stage)))].sort((a,b)=>a-b);
+  if(F.stage!=='latest'&&!nums.includes(+F.stage))F.stage='latest';
+  const chip=(v,l)=>`<button class="chip" data-stage="${v}" aria-pressed="${String(F.stage)===String(v)}">${l}</button>`;
+  $('#stagebar').innerHTML=`<span class="lbl">Etapa</span>`+chip('latest','Última')+nums.map(n=>chip(n,'Etapa '+(ROMAN[n]||n))).join('')+`<span class="summary" id="summary"></span><button class="chip pdfbtn" data-pdf="ranking">Descargar PDF</button><span id="fileBtns"></span><button class="chip" id="baseToggle" hidden title="Jugadores que comparten el puntaje inicial de la categoría (baja cada etapa): no tienen resultados registrados"><span></span></button>`;
+}
+function mvCell(d,r){
+  if(r[5]==='asc')return '<span class="mv up" title="Pasa a esta división para la próxima etapa">▲ Asciende</span>';
+  if(r[5]==='desc')return '<span class="mv down" title="Baja a esta división para la próxima etapa">▼ Desciende</span>';
+  const dm=divMove(d,r);
+  if(dm)return `<span class="mv ${dm.up?'up':'down'}" title="En la etapa anterior estaba en ${esc(dm.from)}">${dm.up?'▲ Sube':'▼ Baja'} de ${esc(dm.from)}</span>`;
+  if(!d._prev)return '<span class="mv eq">–</span>';
+  const p=d._prev._map.get(r[1]);
+  if(!p)return '<span class="mv new">Nuevo</span>';
+  const diff=p[0]-r[0];
+  if(diff>0)return `<span class="mv up">▲ ${diff}</span>`;
+  if(diff<0)return `<span class="mv down">▼ ${-diff}</span>`;
+  return '<span class="mv eq">=</span>';
+}
+// Starting points: Liga Mayor carries points over between seasons (new players start at 1090, Sexta);
+// the other circuits reset every season to 500.
+const START_PTS={'Liga Mayor':1090};const startPts=d=>START_PTS[d.circuit]??500;
+function prevPoints(d,r){
+  if(d.circuit==='Liga Mayor'){
+    // previous stage in any division, including the end of last season
+    const k=d.circuit+'|'+d.gender,seq=stageSeq.get(k)||[],i=seq.indexOf(d.season*100+d.stage);
+    for(let j=i-1;j>=0;j--){
+      const v=ptsAt.get(k+'|'+seq[j])?.get(r[1]);if(v==null)continue;
+      // new season: points carry over, but never below the 1090 starting value
+      if(Math.floor(seq[j]/100)!==d.season)return {v:Math.max(v,startPts(d)),from:'season'};
+      return {v,from:'prev'};
+    }
+    return {v:startPts(d),from:'start'};
+  }
+  if(d._prev&&d._prev.season===d.season){const p=d._prev._map.get(r[1]);if(p)return {v:p[4],from:'prev'};}
+  if(divMove(d,r))return null;            // changed Open A/B: the federation resets the points
+  return {v:startPts(d),from:'start'};
+}
+function dPts(d,r){
+  const pp=prevPoints(d,r);if(!pp)return '';
+  const x=Math.round((r[4]-pp.v)*100)/100;
+  const t=pp.from==='start'?` title="Desde los ${pp.v} puntos iniciales"`:pp.from==='season'?` title="Desde el cierre de ${d.season-1} (${pp.v} pts; mínimo 1090)"`:' title="Desde la etapa anterior"';
+  return x>0?`<span class="dpts"${t}>+${x}</span>`:x<0?`<span class="mv down"${t}>${x}</span>`:`<span class="club"${t}>0</span>`}
+const clubOk=r=>!F.club||fold(clubName(r[3])).includes(fold(F.club));
+// Mixed rankings (Liga Mayor, Master, PTT) have no gender column: use the gender the player has in
+// Liga Menor or Open Femenino when known; players with unknown gender stay listed.
+let knownGender=new Map();
+function buildGenderIndex(){knownGender=new Map();for(const d of docs)if(d.gender==='M'||d.gender==='F')for(const r of d.rows)knownGender.set(r[1],d.gender)}
+const genderOk=(d,r)=>!F.gender||d.gender!=='X'||(knownGender.get(r[1])||F.gender)===F.gender;
+// The rankings and rows the current filters select (shared by the table and the PDF)
+function rankingSelection(){
+  const q=fold(F.q).trim(),out=[];
+  for(const arr of visibleGroups()){
+    const d=F.stage==='latest'?arr[arr.length-1]:arr.find(x=>x.stage===+F.stage);
+    if(!d)continue;
+    const hideBase=!F.showBase&&!q&&d._base!=null;
+    const all=d.rows.filter(r=>(!q||fold(r[2]).includes(q)||r[1].includes(q))&&clubOk(r)&&genderOk(d,r));
+    const rows=hideBase?all.filter(r=>r[4]!==d._base):all;
+    out.push({d,all,rows,hideBase});
+  }
+  return out;
+}
+/* Extra column: promotion distance (Liga Mayor) and next year's category (Liga Menor) */
+let MAYOR_MIN={Primera:1900,Segunda:1700,Tercera:1500,Cuarta:1300,Quinta:1100,Sexta:0};
+const MENOR_ORDER=['U9','U11','U13','U15','U19'];
+let ageLow=new Map();   // season -> Map(carne|gender -> lowest Liga Menor category index listed)
+function buildAgeIndex(){
+  ageLow=new Map();
+  for(const d of docs){if(d.circuit!=='Liga Menor')continue;const i=MENOR_ORDER.indexOf(d.division);if(i<0)continue;
+    if(!ageLow.has(d.season))ageLow.set(d.season,new Map());const m=ageLow.get(d.season);
+    for(const r of d.rows){const k=r[1]+'|'+d.gender;if(!m.has(k)||i<m.get(k))m.set(k,i)}}
+}
+// Players are listed in their own age category and every older one, so the lowest list is their age category.
+// Categories are two-year bands: first year if last season they were in a younger category, second year if
+// they were already in this one (then they move up next year). U19 spans four years: not estimated.
+function nextCategory(season,carne,gender){
+  const cur=ageLow.get(season)?.get(carne+'|'+gender);if(cur==null)return null;
+  if(MENOR_ORDER[cur]==='U19')return {text:'—',title:'U19 abarca cuatro años: no se puede estimar'};
+  const prev=ageLow.get(season-1)?.get(carne+'|'+gender);
+  if(prev==null)return {text:'—',title:`Sin registro en ${season-1}`};
+  if(prev<cur)return {text:MENOR_ORDER[cur],stay:true,title:`Primer año en ${MENOR_ORDER[cur]} (en ${season-1} estaba en ${MENOR_ORDER[prev]})`};
+  if(prev===cur)return {text:MENOR_ORDER[cur+1],up:true,title:`Estimado: ya estaba en ${MENOR_ORDER[cur]} en ${season-1}, segundo año`};
+  return {text:'—',title:'Sin datos suficientes'};
+}
+const SHOW_NEXT_CATEGORY=false;   // "Categoría del próximo año" column for Liga Menor (hidden for now)
+function extraMode(sel){
+  const m=sel.some(x=>x.d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(x.d.division)),n=SHOW_NEXT_CATEGORY&&sel.some(x=>x.d.circuit==='Liga Menor');
+  if(!m&&!n)return null;
+  const season=sel[0]?.d.season;
+  return {label:m&&n?'Próximo paso':m?'Ascenso':`Categoría ${season+1}`,
+    title:m&&n?'Liga Mayor: puntos que faltan para la siguiente división. Liga Menor: categoría estimada para el próximo año.':m?'Puntos que faltan para la siguiente división':'Categoría estimada para el próximo año, según su categoría de edad en '+(season-1)+' y '+season};
+}
+function extraInfo(d,r){
+  if(d.circuit==='Liga Mayor'&&MAYOR_DIVS.includes(d.division)){
+    const i=MAYOR_DIVS.indexOf(d.division);if(i<=0||d.division==='Sin división')return null;
+    if(r[4]<(MAYOR_MIN[d.division]??0))return {text:'Juega una arriba',title:`Sus puntos corresponden a ${MAYOR_DIVS[i+1]||'otra división'}`};
+    const next=MAYOR_DIVS[i-1],need=Math.round((MAYOR_MIN[next]-r[4])*100)/100;
+    return need<=0?{text:`Alcanza ${next}`,up:true,title:`Tiene los puntos de ${next} (${MAYOR_MIN[next]}+)`}:{text:`Faltan ${need} para ${next}`,title:`${next}: desde ${MAYOR_MIN[next]} puntos`};
+  }
+  if(d.circuit==='Liga Menor'&&SHOW_NEXT_CATEGORY)return nextCategory(d.season,r[1],d.gender);
+  return null;
+}
+const extraCell=(d,r)=>{const x=extraInfo(d,r);if(!x)return '<td></td>';return `<td title="${esc(x.title||'')}">${x.up?'<b class="nextup">'+esc(x.text)+'</b>':esc(x.text)}${x.up&&d.circuit==='Liga Menor'?' <small class="club">sube</small>':''}${x.stay?' <small class="club">sigue</small>':''}</td>`};
+function render(){
+  const vg=visibleGroups();
+  renderStagebar(vg);
+  const sel=rankingSelection(),ex=extraMode(sel),cols=ex?8:7;
+  $('#rankHead').innerHTML=`<th class="num">Pos.</th><th>Mov.</th><th>Atleta</th><th>Club</th><th class="num">Puntos</th><th class="num" title="Puntos ganados desde la etapa anterior. En la primera etapa del año, o la primera vez que aparece el jugador, desde los puntos iniciales: 500. En Liga Mayor los puntos continúan de un año al otro, con un mínimo de 1090.">+Pts</th>${ex?`<th title="${esc(ex.title)}">${esc(ex.label)}</th>`:''}<th class="num">Carné</th>`;
+  let html='',count=0,shown=0,hiddenBase=0;
+  for(const {d,all,rows,hideBase} of sel){
+    hiddenBase+=all.length-rows.length;
+    if(!rows.length)continue;
+    count+=rows.length;
+    if(shown>=limit)continue;
+    const cmp=(d._prev?(d._prev.season!==d.season?` · Mov. vs cierre ${d._prev.season}`:''):'')+(d.divisionBy==='points'?` · división asignada por puntos${d.playUpFrom?`; quien jugó una división arriba en la Etapa ${ROMAN[d.playUpFrom]||d.playUpFrom} se mantiene`:''} (el archivo no la indica)`:'');
+    html+=`<tr class="grp"><td colspan="${cols}">${esc(groupLabel(d))}<small>${esc(d.circuit)} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base ${d._base}, ocultos)`:''}${cmp}</small></td></tr>`;
+    for(const r of rows){
+      if(shown>=limit)break;shown++;
+      html+=`<tr class="row" data-carne="${esc(r[1])}" tabindex="0"><td class="num pos${r[0]===1?' top1':''}">${r[0]}</td><td>${mvCell(d,r)}</td><td class="name">${esc(titleCase(r[2]))}</td><td class="club">${esc(clubName(r[3]))}</td><td class="num pts">${r[4]}</td><td class="num">${dPts(d,r)}</td>${ex?extraCell(d,r):''}<td class="num club">${r[1].startsWith('n-')?'':esc(r[1])}</td></tr>`;
+    }
+  }
+  if(!docs.length)html=`<tr><td colspan="${cols}" class="empty">Aún no hay etapas cargadas.</td></tr>`;
+  else if(!count)html=`<tr><td colspan="${cols}" class="empty">Ningún atleta coincide con estos filtros.</td></tr>`;
+  $('#tbody').innerHTML=html;
+  $('#more').hidden=shown>=count;
+  const s=$('#summary');if(s)s.textContent=count?`${count} atleta${count===1?'':'s'}`:'';
+  const files=new Map();
+  for(const {d,rows} of sel){if(!d.sourceFile||!rows.length)continue;const href=`files/${d.season}/${encodeURIComponent(d.sourceFile)}`;
+    if(!files.has(href))files.set(href,[]);files.get(href).push(groupLabel(d))}
+  const fb=$('#fileBtns');
+  if(fb){
+    const tip='Descargar el archivo Excel original publicado por FECOTEME';
+    if(files.size===1){const [href]=files.keys();fb.innerHTML=`<a class="chip pdfbtn filebtn" href="${href}" download title="${tip}">Archivo FECOTEME</a>`}
+    else if(files.size>1){fb.innerHTML=`<details class="filemenu"><summary class="chip pdfbtn filebtn" title="${tip}">Archivo FECOTEME (${files.size})</summary><div class="filelist">${[...files].map(([h,l])=>`<a href="${h}" download>${esc(l.join(', '))}</a>`).join('')}</div></details>`}
+    else fb.innerHTML='';
+  }
+  const bt=$('#baseToggle');
+  if(bt){bt.hidden=!(hiddenBase||F.showBase);bt.querySelector('span').textContent=F.showBase?'Ocultar jugadores en el puntaje base':`Mostrar ${hiddenBase} jugador${hiddenBase===1?'':'es'} en el puntaje base`;}
+  renderHero();
+}
+function renderHero(){
+  const inS=docs.filter(d=>String(d.season)===String(F.season));
+  const ath=new Set(),clubs=new Set();inS.forEach(d=>d.rows.forEach(r=>{ath.add(r[1]);clubs.add(clubName(r[3]))}));
+  const cats=new Set(inS.map(catKey));
+  $('#heroStats').innerHTML=[[ath.size,'Atletas '+(F.season||'')],[cats.size,'Categorías'],[inS.length,'Etapas'],[clubs.size,'Clubes']]
+    .map(([n,l])=>`<div class="hs"><b>${n}</b><span>${esc(l)}</span></div>`).join('');
+}
+function renderStages(){
+  const sorted=docs.slice().sort((a,b)=>sortGroups(a,b)||b.stage-a.stage);
+  let html='',lastSeason=null;
+  for(const d of sorted){
+    if(d.season!==lastSeason){html+=`<h3 style="font-family:var(--display);font-size:24px;margin:14px 0 2px">Temporada ${d.season}</h3>`;lastSeason=d.season}
+    html+=`<div class="stg"><div><div class="t">${esc(groupLabel(d))} · ${stageLabel(d)}</div>
+      <div class="d">${esc(d.circuit)}${d.date?' · '+fmtDate(d.date):''}</div></div>
+      <span class="tag">${d.rows.length} atletas</span>
+      ${d.sourceFile?`<a class="tag" href="files/${d.season}/${encodeURIComponent(d.sourceFile)}" download>Descargar Excel</a>`:''}
+      ${d.sourceUrl?`<a class="tag" href="${esc(d.sourceUrl)}" rel="noopener">Ver en FECOTEME</a>`:''}</div>`;
+  }
+  $('#stagesList').innerHTML=html||'<div class="empty">Aún no hay etapas cargadas.</div>';
+}
+
+/* Athlete career */
+function openAthlete(carne){
+  const hits=docs.filter(d=>d._map.has(carne)).sort((a,b)=>a.season-b.season||a.stage-b.stage||sortGroups(a,b));
+  if(!hits.length)return;
+  const latest=hits[hits.length-1], r0=latest._map.get(carne);
+  const pts=hits.map(d=>({d,r:d._map.get(carne),n:d.rows.length}));
+  // per season summary (main category = the one with most stages that season)
+  const seasons=[...new Set(hits.map(d=>d.season))];
+  const summ=seasons.map(y=>{
+    const ys=pts.filter(p=>p.d.season===y);
+    const cats={};ys.forEach(p=>{cats[catKey(p.d)]=(cats[catKey(p.d)]||0)+1});
+    const main=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0][0];
+    const ms=ys.filter(p=>catKey(p.d)===main);const last=ms[ms.length-1];
+    return {y,div:last.d.division,cat:groupLabel(last.d),circuit:last.d.circuit,stages:ys.length,final:last,best:Math.min(...ms.map(p=>p.r[0])),bestPct:Math.min(...ms.map(p=>topPct(p.r[0],p.n)))};
+  });
+  let yoy='';
+  if(summ.length>1){
+    const a=summ[summ.length-2],b=summ[summ.length-1];
+    const dp=Math.round((b.final.r[4]-a.final.r[4])*100)/100;
+    const pa=topPct(a.final.r[0],a.final.n),pb=topPct(b.final.r[0],b.final.n);
+    yoy=`<div class="series"><h3>${a.y} → ${b.y}</h3><div class="yoy">
+      <div class="card"><b>${esc(a.div)} → ${esc(b.div)}</b><span>Categoría</span></div>
+      <div class="card"><b style="color:${pb<pa?'var(--up)':pb>pa?'var(--down)':'inherit'}">Top ${pa}% → ${pb}%</b><span>Percentil (cierre / actual)</span></div>
+      <div class="card"><b style="color:${dp>0?'var(--up)':dp<0?'var(--down)':'inherit'}">${dp>0?'+':''}${dp}</b><span>Puntos (${a.final.r[4]} → ${b.final.r[4]})</span></div>
+    </div></div>`;
+  }
+  let rows='',ls=null;
+  for(const p of pts.slice().reverse()){
+    if(p.d.season!==ls){ls=p.d.season;rows+=`<tr class="season"><td colspan="5">Temporada ${ls}</td></tr>`}
+    rows+=`<tr><td>${stageLabel(p.d)} <span class="club">· ${esc(groupLabel(p.d))}</span></td><td class="num">${p.r[0]} <span class="club">/ ${p.n}</span></td><td class="num"><span class="pct">Top ${topPct(p.r[0],p.n)}%</span></td><td class="num">${p.r[4]}</td><td class="club">${esc(clubName(p.r[3]))}</td></tr>`;
+  }
+  const first=pts[0];
+  $('#drawer').innerHTML=`<button class="xbtn" id="xbtn" aria-label="Cerrar">×</button>
+    <div class="eyebrow" style="color:var(--muted)">${carne.startsWith('n-')?'Sin carné':'Carné '+esc(carne)}</div>
+    <h2>${esc(titleCase(r0[2]))}</h2>
+    <div class="meta">${esc(clubName(r0[3]))} · ${esc(groupLabel(latest))} · ${esc(latest.circuit)}</div>
+    <button class="btn sm" id="toPlayer" data-carne="${esc(carne)}" style="margin-top:10px">Ver todos sus rankings ${latest.season} →</button>
+    <div class="cards">
+      <div class="card"><b>${r0[0]}<small style="font-size:14px;color:var(--muted)"> / ${latest.rows.length}</small></b><span>Posición actual</span></div>
+      <div class="card"><b>${r0[4]}</b><span>Puntos</span></div>
+      <div class="card"><b>Top ${topPct(r0[0],latest.rows.length)}%</b><span>de su categoría</span></div>
+    </div>
+    <div class="series"><h3>Evolución · ${pts.length} etapa${pts.length===1?'':'s'} desde ${stageLabel(first.d)} ${first.d.season}</h3>${chart(pts)}</div>
+    ${yoy}
+    <div class="series"><h3>Historial</h3><div style="overflow-x:auto"><table class="career"><thead><tr><th>Etapa</th><th class="num">Pos.</th><th class="num">Percentil</th><th class="num">Puntos</th><th>Club</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  $('#drawer').hidden=false;$('#scrim').hidden=false;$('#xbtn').focus();
+}
+function closeDrawer(){$('#drawer').hidden=true;$('#scrim').hidden=true}
+function chart(pts){
+  if(pts.length<2)return `<p class="club" style="font-size:13px">Solo hay una etapa registrada; la gráfica aparece desde la segunda.</p>`;
+  // y = percentile (top %), so it stays comparable when the athlete changes category or year
+  const W=460,H=190,L=62,R=20,T=24,B=38;
+  const vals=pts.map(p=>topPct(p.r[0],p.n));
+  let lo=Math.max(0,Math.min(...vals)-5),hi=Math.min(100,Math.max(...vals)+5);if(hi-lo<10){hi=Math.min(100,lo+10)}
+  const x=i=>L+12+i*(W-L-R-24)/(pts.length-1);
+  const y=v=>T+(v-lo)*(H-T-B)/(hi-lo);
+  const ticks=[lo,Math.round((lo+hi)/2),hi];
+  const path=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(vals[i]).toFixed(1)}`).join('');
+  const area=path+`L${x(pts.length-1).toFixed(1)},${H-B}L${x(0).toFixed(1)},${H-B}Z`;
+  let seps='';for(let i=1;i<pts.length;i++)if(pts[i].d.season!==pts[i-1].d.season){const sx=(x(i)+x(i-1))/2;seps+=`<line x1="${sx}" x2="${sx}" y1="${T-12}" y2="${H-B}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1"/><text x="${sx+4}" y="${T-4}" font-size="11" fill="var(--muted)">${pts[i].d.season}</text>`}
+  const every=Math.ceil(pts.length/8);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Percentil por etapa">
+    ${ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--muted)">Top ${Math.max(1,t)}%</text>`).join('')}
+    ${seps}
+    <path d="${area}" fill="var(--ball)" fill-opacity=".09"/>
+    <path d="${path}" fill="none" stroke="var(--ball)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${pts.map((p,i)=>{const last=i===pts.length-1;const lab=(i%every===0||last);return `<circle cx="${x(i)}" cy="${y(vals[i])}" r="${last?5.5:4}" fill="${last?'var(--ball)':'var(--surface)'}" stroke="var(--ball)" stroke-width="2"/>
+      ${lab?`<text x="${x(i)}" y="${y(vals[i])-10}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text)">#${p.r[0]}</text>
+      <text x="${x(i)}" y="${H-20}" text-anchor="middle" font-size="11" fill="var(--muted)">${shortStage(p.d)}</text>
+      <text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${esc(p.d.division)}</text>`:''}`}).join('')}
+  </svg><p class="pct" style="margin:4px 0 0">Posición relativa dentro de su categoría (más arriba = mejor). Etiquetas: etapa·año y categoría.</p>`;
+}
+
+/* Events */
+$('#fq').addEventListener('input',e=>{F.q=e.target.value;limit=250;render()});
+$('#fclub').addEventListener('input',e=>{F.club=e.target.value.trim();limit=250;saveF();render()});
+for(const [id,k] of [['#fseason','season'],['#fcircuit','circuit'],['#fdiv','div'],['#fgender','gender']])
+  $(id).addEventListener('change',e=>{F[k]=e.target.value;if(k==='season'||k==='circuit'){buildFilters()}limit=250;saveF();render()});
+document.addEventListener('click',e=>{document.querySelectorAll('.filemenu[open]').forEach(m=>{if(!m.contains(e.target))m.removeAttribute('open')})});
+$('#stagebar').addEventListener('click',e=>{
+  if(e.target.closest('#baseToggle')){F.showBase=!F.showBase;limit=250;render();return}
+  const b=e.target.closest('[data-stage]');if(!b)return;F.stage=b.dataset.stage;saveF();render()});
+$('#tbody').addEventListener('click',e=>{const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)});
+$('#tbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const tr=e.target.closest('tr.row');if(tr)openAthlete(tr.dataset.carne)}});
+$('#moreBtn').addEventListener('click',()=>{limit+=500;render()});
+$('#scrim').addEventListener('click',closeDrawer);
+$('#drawer').addEventListener('click',e=>{if(e.target.id==='xbtn')closeDrawer();const tp=e.target.closest('#toPlayer');if(tp){closeDrawer();showTab('player');P.season=null;const a=athletes.find(x=>x.carne===tp.dataset.carne);P.season=a?Math.max(...a.seasons):P.season;$('#pseason').value=String(P.season);selectPlayer(tp.dataset.carne);window.scrollTo(0,0)}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
+/* ---------- Player tab: one line per ranking the player competes in ---------- */
+const P={carne:null,season:null,metric:'pos'};
+let athletes=[];   // [{carne,name,fold,club,seasons:Set}]
+function buildAthletes(){
+  const m=new Map();
+  for(const d of docs)for(const r of d.rows){
+    let a=m.get(r[1]);
+    if(!a){a={carne:r[1],name:r[2],club:r[3],seasons:new Set(),n:0,lastSeason:0};m.set(r[1],a)}
+    a.seasons.add(d.season);a.n++;
+    if(d.season>=a.lastSeason){a.lastSeason=d.season;a.name=r[2];a.club=r[3]}
+  }
+  athletes=[...m.values()].map(a=>({...a,f:fold(a.name)}));
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  $('#pseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(!P.season)P.season=seasons[0];
+  $('#pseason').value=String(P.season);
+}
+// Liga Mayor and Open Femenino stay one line even when the player changes division.
+const seriesKey=d=>DIVIDED.has(d.circuit)?d.circuit+'|'+d.gender:catKey(d);
+const seriesName=d=>d.circuit==='Liga Mayor'?'Liga Mayor':d.circuit==='Open Femenino'?'Open Femenino':d.circuit==='Liga Menor'?d.division+(d.gender==='F'?' Fem':' Masc'):d.division;
+const seriesOrder=d=>circRank(d.circuit)*1000+(DIVIDED.has(d.circuit)?0:divRank(d.division));
+function activeCount(d){if(d._active==null)d._active=d._base==null?d.rows.length:d.rows.filter(r=>r[4]!==d._base).length;return d._active}
+function playerSeries(carne,season){
+  const S=new Map(),inactive=new Map();
+  for(const d of docs){
+    if(d.season!==season)continue;
+    const r=d._map.get(carne);if(!r)continue;
+    const k=seriesKey(d);
+    if(d._base!=null&&r[4]===d._base){if(!S.has(k))inactive.set(k,seriesName(d));continue}
+    inactive.delete(k);
+    if(!S.has(k))S.set(k,{key:k,name:seriesName(d),order:seriesOrder(d),circuit:d.circuit,pts:[]});
+    const n=activeCount(d);
+    S.get(k).pts.push({stage:d.stage,rank:r[0],n,pct:Math.max(1,Math.round(100*r[0]/n)),points:r[4],division:d.division,club:r[3],flag:r[5]});
+  }
+  const list=[...S.values()].sort((a,b)=>a.order-b.order);
+  list.forEach((s,i)=>{s.color=`var(--s${(i%8)+1})`;s.pts.sort((a,b)=>a.stage-b.stage)});
+  for(const s of list)inactive.delete(s.key);
+  return {list,inactive:[...inactive.values()]};
+}
+function showSugg(){
+  const q=fold($('#pq').value).trim(),box=$('#psugg');
+  if(q.length<2){box.hidden=true;return}
+  const hits=athletes.filter(a=>a.f.includes(q)||a.carne.startsWith(q)).sort((a,b)=>(b.f.startsWith(q)-a.f.startsWith(q))||b.n-a.n).slice(0,8);
+  box.innerHTML='';
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){
+    const b=document.createElement('button');b.type='button';b.setAttribute('role','option');b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=titleCase(a.name);
+    const s=document.createElement('small');s.textContent=`${clubName(a.club)} · ${a.carne.startsWith('n-')?'sin carné':'carné '+a.carne}`;
+    b.append(l,s);box.append(b);
+  }
+  box.hidden=false;
+}
+function selectPlayer(carne,push=true){
+  P.carne=carne;$('#psugg').hidden=true;
+  const a=athletes.find(x=>x.carne===carne);
+  if(a){$('#pq').value=titleCase(a.name);if(!a.seasons.has(+P.season)){P.season=Math.max(...a.seasons);$('#pseason').value=String(P.season)}}
+  if(push)try{history.replaceState(null,'','#j'+encodeURIComponent(carne))}catch(e){}
+  renderPlayer();
+}
+function renderPlayer(){
+  const body=$('#pbody');
+  if(!P.carne){body.innerHTML='<div class="pempty">Busque un jugador para ver su evolución en todos los rankings donde compite.</div>';return}
+  const a=athletes.find(x=>x.carne===P.carne);
+  const {list,inactive}=playerSeries(P.carne,+P.season);
+  const stages=[...new Set(docs.filter(d=>d.season===+P.season).map(d=>d.stage))].sort((x,y)=>x-y);
+  let h=`<div class="phead"><h2>${esc(titleCase(a?a.name:''))}</h2><span class="meta">${esc(clubName(a?a.club:''))}${P.carne.startsWith('n-')?'':' · carné '+esc(P.carne)}</span></div>`;
+  if(!list.length){
+    body.innerHTML=h+`<div class="pempty">Sin resultados en ${P.season}${inactive.length?` (aparece en ${esc(inactive.join(', '))} solo con el puntaje base)`:''}.</div>`;return;
+  }
+  h+=`<div class="pcard">
+    <div class="pctl"><span class="lbl">Mostrar</span>
+      <button class="chip" data-metric="pos" aria-pressed="${P.metric==='pos'}">Posición</button>
+      <button class="chip" data-metric="pct" aria-pressed="${P.metric==='pct'}">Percentil</button>
+      <span class="summary">${list.length} ranking${list.length===1?'':'s'} en ${P.season}</span><button class="chip pdfbtn" data-pdf="player">Descargar PDF</button></div>
+    ${list.length>1?`<div class="legend">${list.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''}
+    <div class="pchart" id="pchart"></div>
+    <p class="pct" style="margin:6px 0 0">${P.metric==='pos'?'Posición en cada ranking (escala logarítmica: más arriba = mejor).':'Percentil dentro de cada ranking, entre los jugadores con resultados (más arriba = mejor). Permite comparar rankings de distinto tamaño.'} Liga Mayor y Open Femenino se muestran como una sola línea aunque el jugador cambie de división.</p>
+    ${inactive.length?`<div class="inactive">También inscrito, sin resultados (solo puntaje base): ${esc(inactive.join(', '))}.</div>`:''}
+  </div>`;
+  // table view
+  h+=`<div class="tblwrap ptable"><table><thead><tr><th>Ranking</th>${stages.map(s=>`<th class="num">Etapa ${ROMAN[s]||s}</th>`).join('')}</tr></thead><tbody>`+
+    list.map(s=>`<tr><td><span style="display:inline-block;width:12px;height:2px;background:${s.color};vertical-align:middle;margin-right:8px"></span>${esc(s.name)} <button class="btn sm" data-compare="${esc(s.key)}" style="margin-left:6px">Comparar</button></td>`+
+      stages.map(st=>{const p=s.pts.find(x=>x.stage===st);return `<td class="num">${p?`<b>${p.rank}</b> <small>/ ${p.n}</small><br><small>${p.points} pts${DIVIDED.has(s.circuit)?' · '+esc(p.division.replace(/^Open /,'')):''}</small>`:'<small>—</small>'}</td>`}).join('')+'</tr>').join('')+
+    `</tbody></table></div>`;
+  body.innerHTML=h;
+  drawPlayerChart(list,stages);
+}
+function drawPlayerChart(list,stages,opt={}){
+  const host=$(opt.host||'#pchart');if(!host)return;
+  const metric=opt.metric||P.metric,season=opt.season||P.season;
+  const W=Math.max(300,host.clientWidth||600),H=W<520?260:320,L=52,R=W<520?16:110,T=16,B=34;
+  const iw=W-L-R,ih=H-T-B;
+  const x=st=>L+(stages.length===1?iw/2:(stages.indexOf(st))*iw/(stages.length-1));
+  const pos=metric==='pos',ptsM=metric==='pts';
+  const val=p=>pos?p.rank:ptsM?p.points:p.pct;
+  const all=list.flatMap(s=>s.pts.map(val));
+  let y,ticks,fmt;
+  if(pos){
+    const hi=Math.max(2,Math.max(...all)*1.25),lo=1;
+    const l0=Math.log(lo),l1=Math.log(hi);
+    y=v=>T+(Math.log(v)-l0)/(l1-l0)*ih;
+    ticks=[1,2,3,5,10,20,50,100,200,500,1000,2000,5000].filter(t=>t<=hi);fmt=t=>'#'+t;
+  }else if(ptsM){
+    // points: higher is better, drawn at the top; nice round ticks
+    let lo=Math.min(...all),hi=Math.max(...all);const span=Math.max(20,hi-lo),pad=span*.12;lo-=pad;hi+=pad;
+    const step=[10,20,25,50,100,200,250,500].find(st=>span/st<=5)||1000;
+    y=v=>T+(hi-v)/(hi-lo)*ih;ticks=[];for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step)ticks.push(t);fmt=t=>String(t);
+  }else{
+    y=v=>T+(v-1)/99*ih;ticks=[1,25,50,75,100];fmt=t=>'Top '+t+'%';
+  }
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Evolución por etapa en cada ranking');
+  const el=(tag,attrs,parent=svg)=>{const e=document.createElementNS(ns,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent.append(e);return e};
+  for(const t of ticks){
+    el('line',{x1:L,x2:W-R,y1:y(t),y2:y(t),stroke:'var(--line)','stroke-width':1});
+    const tx=el('text',{x:L-8,y:y(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'});tx.textContent=fmt(t);
+  }
+  for(const st of stages){const tx=el('text',{x:x(st),y:H-10,'text-anchor':'middle','font-size':11,fill:'var(--muted)'});tx.textContent='Etapa '+(ROMAN[st]||st)}
+  const cross=el('line',{x1:0,x2:0,y1:T,y2:T+ih,stroke:'var(--muted)','stroke-width':1,'stroke-dasharray':'3 3',opacity:0});
+  for(const s of list){
+    // break the line where a stage is missing
+    let d='',prev=null;
+    for(const p of s.pts){const cmd=(prev!=null&&stages.indexOf(p.stage)===stages.indexOf(prev)+1)?'L':'M';d+=`${cmd}${x(p.stage).toFixed(1)},${y(val(p)).toFixed(1)}`;prev=p.stage}
+    el('path',{d,fill:'none',stroke:s.color,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'});
+    for(const p of s.pts)el('circle',{cx:x(p.stage),cy:y(val(p)),r:4.5,fill:s.color,stroke:'var(--surface)','stroke-width':2});
+  }
+  // direct labels at each line's last point (wide screens, up to 4 lines), nudged apart
+  if(R>60&&list.length<=4){
+    const labs=list.map(s=>{const p=s.pts[s.pts.length-1];return {s,p,y:y(val(p))}}).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<labs.length;i++)if(labs[i].y-labs[i-1].y<14)labs[i].y=labs[i-1].y+14;
+    for(const l of labs){const tx=el('text',{x:x(l.p.stage)+10,y:l.y+4,'font-size':12,'font-weight':600,fill:'var(--text)'});tx.textContent=l.s.short||l.s.name}
+  }
+  const hit=el('rect',{x:L,y:T,width:iw,height:ih,fill:'transparent'});
+  host.innerHTML='';host.append(svg);
+  const tip=document.createElement('div');tip.className='ptip';tip.hidden=true;host.append(tip);
+  const nearest=cx=>stages.reduce((b,st)=>Math.abs(x(st)-cx)<Math.abs(x(b)-cx)?st:b,stages[0]);
+  const show=st=>{
+    cross.setAttribute('x1',x(st));cross.setAttribute('x2',x(st));cross.setAttribute('opacity',1);
+    tip.innerHTML='';const hd=document.createElement('div');hd.className='h';hd.textContent='Etapa '+(ROMAN[st]||st)+' · '+season;tip.append(hd);
+    for(const s of list){
+      const p=s.pts.find(q=>q.stage===st);
+      const row=document.createElement('div');row.className='r';
+      const i=document.createElement('i');i.style.background=s.color;
+      const b=document.createElement('b');b.textContent=p?(pos?`#${p.rank} / ${p.n}`:ptsM?`${p.points} pts`:`Top ${p.pct}%`):'—';
+      const n=document.createElement('span');n.textContent=(s.short||s.name)+(p&&DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):'')+(p?(ptsM?` · #${p.rank}`:` · ${p.points} pts`):'');
+      row.append(i,b,n);tip.append(row);
+    }
+    tip.hidden=false;
+    const hr=host.getBoundingClientRect(),px=x(st)/W*hr.width;
+    const tw=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,px+12+tw>hr.width?px-tw-12:px+12),Math.max(0,hr.width-tw))+'px';tip.style.top='8px';
+  };
+  const hide=()=>{tip.hidden=true;cross.setAttribute('opacity',0)};
+  hit.addEventListener('pointermove',e=>{const r=svg.getBoundingClientRect();show(nearest((e.clientX-r.left)/r.width*W))});
+  hit.addEventListener('pointerleave',hide);
+  svg.setAttribute('tabindex','0');let ki=stages.length-1;
+  svg.addEventListener('focus',()=>show(stages[ki]));svg.addEventListener('blur',hide);
+  svg.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ki=Math.max(0,Math.min(stages.length-1,ki+(e.key==='ArrowRight'?1:-1)));show(stages[ki]);e.preventDefault()}});
+}
+$('#pq').addEventListener('input',showSugg);
+$('#pq').addEventListener('focus',showSugg);
+$('#pq').addEventListener('keydown',e=>{
+  const box=$('#psugg'),items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+  let i=items.findIndex(b=>b.classList.contains('act'));
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[i]?.classList.remove('act');i=e.key==='ArrowDown'?Math.min(items.length-1,i+1):Math.max(0,i-1);items[i].classList.add('act');items[i].scrollIntoView({block:'nearest'})}
+  else if(e.key==='Enter'){e.preventDefault();selectPlayer((items[i]||items[0]).dataset.carne)}
+  else if(e.key==='Escape'){box.hidden=true}
+});
+$('#psugg').addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(b)selectPlayer(b.dataset.carne)});
+document.addEventListener('click',e=>{if(!e.target.closest('.psearch'))$('#psugg').hidden=true});
+$('#pseason').addEventListener('change',e=>{P.season=+e.target.value;renderPlayer()});
+$('#pbody').addEventListener('click',e=>{
+  const b=e.target.closest('[data-metric]');if(b){P.metric=b.dataset.metric;renderPlayer();return}
+  const c=e.target.closest('[data-compare]');if(c){C.season=+P.season;C.key=c.dataset.compare;C.players=[P.carne,null,null];showTab('compare');window.scrollTo(0,0)}});
+let rsT;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>{if(!$('#view-player').hidden&&P.carne)renderPlayer()},150)});
+/* ---------- Comparar: up to three players in the same ranking ---------- */
+const C={season:null,key:null,players:[null,null,null],metric:'pos'};
+const shortName=n=>{const w=titleCase(n).split(' ');return w.length>=3?w[0]+' '+w[w.length-2]:w.slice(0,2).join(' ')};
+function compareCats(season){
+  const m=new Map();
+  for(const d of docs){if(d.season!==season)continue;const k=seriesKey(d);if(!m.has(k))m.set(k,{key:k,name:seriesName(d),order:seriesOrder(d)})}
+  return [...m.values()].sort((a,b)=>a.order-b.order);
+}
+function compareCandidates(){
+  const m=new Map();
+  for(const d of docs){
+    if(d.season!==C.season||seriesKey(d)!==C.key)continue;
+    for(const r of d.rows){if(d._base!=null&&r[4]===d._base)continue;
+      const a=m.get(r[1]);if(!a||d.stage>=a.stage)m.set(r[1],{carne:r[1],name:r[2],club:r[3],stage:d.stage,rank:r[0],f:fold(r[2])});}
+  }
+  return m;
+}
+function buildCompareOptions(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);
+  if(!C.season)C.season=seasons[0];
+  $('#cseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#cseason').value=String(C.season);
+  const cats=compareCats(C.season);
+  if(!cats.some(c=>c.key===C.key))C.key=(cats.find(c=>c.name==='U13 Masc')||cats[0]||{}).key;
+  $('#ccat').innerHTML=cats.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');$('#ccat').value=C.key||'';
+  const cand=compareCandidates();
+  C.players=C.players.map(c=>c&&cand.has(c)?c:null);
+  C.players.forEach((c,i)=>{$('#cq'+i).value=c?titleCase(cand.get(c).name):''});
+}
+function showCompareSugg(i){
+  const q=fold($('#cq'+i).value).trim(),box=$('#csugg'+i);box.innerHTML='';
+  const cand=[...compareCandidates().values()].filter(a=>!C.players.includes(a.carne)||C.players[i]===a.carne);
+  const hits=(q?cand.filter(a=>a.f.includes(q)||a.carne.startsWith(q)):cand).sort((a,b)=>a.rank-b.rank).slice(0,8);
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){
+    const b=document.createElement('button');b.type='button';b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=titleCase(a.name);
+    const sm=document.createElement('small');sm.textContent=`#${a.rank} · ${clubName(a.club)}`;
+    b.append(l,sm);box.append(b);
+  }
+  box.hidden=false;
+}
+function compareSeries(){
+  const out=[];
+  C.players.forEach((carne,i)=>{
+    if(!carne)return;
+    const s=playerSeries(carne,C.season).list.find(x=>x.key===C.key);if(!s)return;
+    const a=athletes.find(x=>x.carne===carne);
+    // points at the start of the season (500, or Liga Mayor's carried-over value) for the season change
+    const firstDoc=docs.filter(d=>d.season===C.season&&seriesKey(d)===C.key&&d._map.has(carne)&&!(d._base!=null&&d._map.get(carne)[4]===d._base)).sort((x,y)=>x.stage-y.stage)[0];
+    const pp=firstDoc?prevPoints(firstDoc,firstDoc._map.get(carne)):null;
+    out.push({...s,carne,slot:i,color:`var(--s${i+1})`,name:titleCase(a?a.name:carne),short:shortName(a?a.name:carne),start:pp?pp.v:null});
+  });
+  return out;
+}
+function renderCompare(){
+  const body=$('#cbody');
+  const list=compareSeries();
+  const catName=(compareCats(C.season).find(c=>c.key===C.key)||{}).name||'';
+  if(!list.length){body.innerHTML=`<div class="pempty">Elija el ranking y hasta tres jugadores para compararlos etapa por etapa.</div>`;return}
+  const stages=[...new Set(docs.filter(d=>d.season===C.season&&seriesKey(d)===C.key).map(d=>d.stage))].sort((a,b)=>a-b);
+  // summary per player
+  const sum=list.map(s=>{const last=s.pts[s.pts.length-1];return {s,last,best:Math.min(...s.pts.map(p=>p.rank)),
+    change:s.start!=null?Math.round((last.points-s.start)*100)/100:null,played:s.pts.length,
+    ahead:stages.filter(st=>{const me=s.pts.find(p=>p.stage===st);if(!me)return false;return list.every(o=>o===s||!o.pts.find(p=>p.stage===st)||o.pts.find(p=>p.stage===st).rank>me.rank)}).length}});
+  const bestOf=(f,dir)=>{const v=sum.map(f).filter(x=>x!=null);return v.length?(dir<0?Math.min(...v):Math.max(...v)):null};
+  const bLast=bestOf(x=>x.last.stage===stages[stages.length-1]?x.last.rank:null,-1),bBest=bestOf(x=>x.best,-1),bPts=bestOf(x=>x.last.points,1),bCh=bestOf(x=>x.change,1),bAhead=bestOf(x=>x.ahead,1);
+  const w=(v,b)=>v!=null&&v===b&&list.length>1?' class="win"':'';
+  let h=`<div class="pcard">
+    <div class="pctl"><span class="lbl">Mostrar</span>
+      <button class="chip" data-cmetric="pos" aria-pressed="${C.metric==='pos'}">Posición</button>
+      <button class="chip" data-cmetric="pts" aria-pressed="${C.metric==='pts'}">Puntos</button>
+      <span class="summary">${esc(catName)} · ${C.season}</span><button class="chip pdfbtn" data-pdf="compare">Descargar PDF</button></div>
+    ${list.length>1?`<div class="legend">${list.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''}
+    <div class="pchart" id="cchart"></div>
+    <p class="pct" style="margin:6px 0 0">${C.metric==='pos'?'Posición en el ranking en cada etapa (escala logarítmica: más arriba = mejor).':'Puntos de ranking en cada etapa (más arriba = mejor).'}${DIVIDED.has(list[0].circuit)?' En Liga Mayor y Open Femenino la posición es dentro de la división de cada etapa; los puntos sí se comparan directamente.':''}</p>
+  </div>
+  <div class="tblwrap ptable ctable"><table><thead><tr><th>Resumen ${C.season}</th>${list.map(s=>`<th class="num"><span style="display:inline-block;width:12px;height:3px;background:${s.color};vertical-align:middle;margin-right:6px"></span>${esc(s.short)}</th>`).join('')}</tr></thead><tbody>
+    <tr><td>Posición actual</td>${sum.map(x=>`<td class="num"><b${w(x.last.stage===stages[stages.length-1]?x.last.rank:null,bLast)}>#${x.last.rank}</b> <small>/ ${x.last.n}${x.last.stage!==stages[stages.length-1]?' · Etapa '+(ROMAN[x.last.stage]||x.last.stage):''}</small></td>`).join('')}</tr>
+    <tr><td>Mejor posición del año</td>${sum.map(x=>`<td class="num"><b${w(x.best,bBest)}>#${x.best}</b></td>`).join('')}</tr>
+    <tr><td>Puntos actuales</td>${sum.map(x=>`<td class="num"><b${w(x.last.points,bPts)}>${x.last.points}</b></td>`).join('')}</tr>
+    <tr><td>Puntos ganados en ${C.season}</td>${sum.map(x=>`<td class="num"><b${w(x.change,bCh)}>${x.change==null?'—':(x.change>0?'+':'')+x.change}</b>${x.start!=null?` <small>desde ${x.start}</small>`:''}</td>`).join('')}</tr>
+    <tr><td>Etapas jugadas</td>${sum.map(x=>`<td class="num"><b>${x.played}</b> <small>de ${stages.length}</small></td>`).join('')}</tr>
+    ${list.length>1?`<tr><td>Etapas terminando mejor ubicado</td>${sum.map(x=>`<td class="num"><b${w(x.ahead,bAhead)}>${x.ahead}</b></td>`).join('')}</tr>`:''}
+  </tbody></table></div>
+  <div class="tblwrap ptable ctable"><table><thead><tr><th>Etapa</th>${list.map(s=>`<th class="num">${esc(s.short)}</th>`).join('')}</tr></thead><tbody>`+
+  stages.map(st=>{const ps=list.map(s=>s.pts.find(p=>p.stage===st));const br=Math.min(...ps.filter(Boolean).map(p=>p.rank));
+    return `<tr><td>Etapa ${ROMAN[st]||st}</td>${ps.map(p=>p?`<td class="num"><b${list.length>1&&p.rank===br?' class="win"':''}>#${p.rank}</b> <small>/ ${p.n}</small><br><small>${p.points} pts${DIVIDED.has(list[0].circuit)?' · '+esc(p.division.replace(/^Open /,'')):''}</small></td>`:'<td class="num"><small>—</small></td>').join('')}</tr>`}).join('')+
+  `</tbody></table></div>`;
+  body.innerHTML=h;
+  drawPlayerChart(list,stages,{host:'#cchart',metric:C.metric,season:C.season});
+}
+$('#cseason').addEventListener('change',e=>{C.season=+e.target.value;buildCompareOptions();renderCompare()});
+$('#ccat').addEventListener('change',e=>{C.key=e.target.value;C.players=[null,null,null];buildCompareOptions();renderCompare()});
+for(let i=0;i<3;i++){
+  const inp=$('#cq'+i),box=$('#csugg'+i);
+  inp.addEventListener('focus',()=>showCompareSugg(i));
+  inp.addEventListener('input',()=>{if(!inp.value.trim()&&C.players[i]){C.players[i]=null;renderCompare()}showCompareSugg(i)});
+  inp.addEventListener('keydown',e=>{
+    const items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+    let k=items.findIndex(b=>b.classList.contains('act'));
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[k]?.classList.remove('act');k=e.key==='ArrowDown'?Math.min(items.length-1,k+1):Math.max(0,k-1);items[k].classList.add('act')}
+    else if(e.key==='Enter'){e.preventDefault();(items[k]||items[0]).click()}
+    else if(e.key==='Escape')box.hidden=true;
+  });
+  box.addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(!b)return;C.players[i]=b.dataset.carne;inp.value=b.querySelector('span').textContent;box.hidden=true;renderCompare()});
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#view-compare .psearch'))document.querySelectorAll('#view-compare .sugg').forEach(x=>x.hidden=true)});
+$('#cbody').addEventListener('click',e=>{const b=e.target.closest('[data-cmetric]');if(b){C.metric=b.dataset.cmetric;renderCompare()}});
+let rsC;window.addEventListener('resize',()=>{clearTimeout(rsC);rsC=setTimeout(()=>{if(!$('#view-compare').hidden)renderCompare()},150)});
+/* ---------- Clubes ---------- */
+const K={season:null,circuit:'',q:'',open:null};
+function clubStats(){
+  const m=new Map();
+  for(const arr of groups.values()){
+    const d=arr[arr.length-1];if(d.season!==K.season||(K.circuit&&d.circuit!==K.circuit))continue;
+    const n=activeCount(d);
+    for(const r of d.rows){if(d._base!=null&&r[4]===d._base)continue;
+      const c=clubName(r[3]);if(!c||c==='—')continue;
+      if(!m.has(c))m.set(c,{club:c,players:new Set(),entries:[]});
+      const x=m.get(c);x.players.add(r[1]);x.entries.push({carne:r[1],name:titleCase(r[2]),rank:r[0],n,points:r[4],label:groupLabel(d),circuit:d.circuit,stage:d.stage,order:sortKeyOf(d)});}
+  }
+  const list=[...m.values()].map(x=>{x.entries.sort((a,b)=>a.rank-b.rank||a.order-b.order);return {...x,nPlayers:x.players.size,top3:x.entries.filter(e=>e.rank<=3).length,top10:x.entries.filter(e=>e.rank<=10).length,best:x.entries[0]}});
+  list.sort((a,b)=>b.top3-a.top3||b.top10-a.top10||b.nPlayers-a.nPlayers||a.club.localeCompare(b.club,'es'));
+  list.forEach((x,i)=>x.pos=i+1);
+  return list;
+}
+const sortKeyOf=d=>circRank(d.circuit)*1000+divRank(d.division);
+function buildClubFilters(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);if(!K.season)K.season=seasons[0];
+  $('#kseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#kseason').value=String(K.season);
+  const circs=[...new Set(docs.filter(d=>d.season===K.season).map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b));
+  if(K.circuit&&!circs.includes(K.circuit))K.circuit='';
+  $('#kcircuit').innerHTML='<option value="">Todos</option>'+circs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');$('#kcircuit').value=K.circuit;
+}
+function clubRows(){const q=fold(K.q).trim();return clubStats().filter(x=>!q||fold(x.club).includes(q))}
+function renderClubs(){
+  const rows=clubRows();
+  $('#ksummary').textContent=`${rows.length} club${rows.length===1?'':'es'} · última etapa de cada ranking${K.circuit?' · '+K.circuit:''} ${K.season}`;
+  let h='';
+  for(const x of rows){
+    const open=K.open===x.club;
+    h+=`<tr class="row krow" data-club="${esc(x.club)}" tabindex="0" aria-expanded="${open}"><td class="num pos${x.pos===1?' top1':''}">${x.pos}</td><td class="name">${esc(x.club)}</td><td class="num">${x.nPlayers}</td><td class="num pts">${x.top3}</td><td class="num">${x.top10}</td><td>${x.best?`#${x.best.rank} ${esc(x.best.label)} <span class="club">· ${esc(x.best.name)}</span>`:''}</td></tr>`;
+    if(open){
+      h+=`<tr class="kdetail"><td colspan="6"><div class="kd-head"><b>${esc(x.club)}</b> <span class="club">${x.nPlayers} jugadores con resultados</span> <button class="btn sm" data-kview="${esc(x.club)}">Ver en Ranking →</button></div><table class="career"><tbody>`+
+        x.entries.map(e=>`<tr class="kplayer" data-carne="${esc(e.carne)}"><td class="num"><b>#${e.rank}</b> <span class="club">/ ${e.n}</span></td><td>${esc(e.name)}</td><td class="club">${esc(e.label)} · ${esc(e.circuit)}</td><td class="num">${e.points} pts</td></tr>`).join('')+`</tbody></table></td></tr>`;
+    }
+  }
+  $('#kbody').innerHTML=h||'<tr><td colspan="6" class="empty">Ningún club coincide.</td></tr>';
+}
+$('#kseason').addEventListener('change',e=>{K.season=+e.target.value;K.open=null;buildClubFilters();renderClubs()});
+$('#kcircuit').addEventListener('change',e=>{K.circuit=e.target.value;K.open=null;renderClubs()});
+$('#kq').addEventListener('input',e=>{K.q=e.target.value;renderClubs()});
+$('#kbody').addEventListener('click',e=>{
+  const v=e.target.closest('[data-kview]');if(v){F.season=String(K.season);F.circuit=K.circuit;F.div='';F.gender='';F.club=v.dataset.kview;F.stage='latest';buildFilters();showTab('rank');render();window.scrollTo(0,0);return}
+  const pl=e.target.closest('.kplayer');if(pl){P.season=K.season;$('#pseason').value=String(K.season);showTab('player');selectPlayer(pl.dataset.carne);window.scrollTo(0,0);return}
+  const r=e.target.closest('.krow');if(r){K.open=K.open===r.dataset.club?null:r.dataset.club;renderClubs()}});
+$('#kbody').addEventListener('keydown',e=>{if(e.key==='Enter'){const r=e.target.closest('.krow');if(r){K.open=K.open===r.dataset.club?null:r.dataset.club;renderClubs()}}});
+
+/* ---------- PDF downloads (jsPDF, loaded on first use) ---------- */
+const PDF_LIBS=['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'];
+const loadScript=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`)&&window.jspdf){res();return}const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error('No se pudo cargar '+src));document.head.append(sc)});
+let logoData=null;
+async function getLogo(){if(logoData)return logoData;try{const b=await (await fetch('logo.png')).blob();logoData=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}catch(e){logoData=''}return logoData}
+const BLUE=[37,82,168],BLUE2=[53,106,212],RED=[200,32,29],INK=[19,33,61],MUTED=[86,99,125];
+async function newPdf(title,subtitle,landscape=false){
+  await loadScript(PDF_LIBS[0]);await loadScript(PDF_LIBS[1]);
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:landscape?'l':'p',unit:'pt',format:'letter'});
+  const W=doc.internal.pageSize.getWidth(),logo=await getLogo();
+  doc.setFillColor(...BLUE);doc.rect(0,0,W,64,'F');doc.setFillColor(...RED);doc.rect(0,64,W,3,'F');
+  if(logo){doc.setFillColor(255,255,255);doc.circle(44,32,23,'F');doc.addImage(logo,'PNG',23,11,42,42)}
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text(title,78,30);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text(subtitle,78,47);
+  doc._startY=86;return doc;
+}
+function pdfFooters(doc){
+  const n=doc.getNumberOfPages(),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  const when=new Date().toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'});
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(...MUTED);
+    doc.text(`Tenis de Mesa Curridabat · Ranking Nacional · Fuente: resultados publicados por FECOTEME · ${when}`,40,H-22);
+    doc.text(`Página ${i} de ${n}`,W-40,H-22,{align:'right'});}
+}
+const tableStyle={styles:{font:'helvetica',fontSize:8.5,cellPadding:3.5,textColor:INK,lineColor:[214,222,235],lineWidth:.5},headStyles:{fillColor:BLUE2,textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[244,247,252]},margin:{left:40,right:40,top:40}};
+async function svgImage(svg,scale=2){
+  // Resolve the theme colors with the light palette so the chart prints on white
+  const root=document.documentElement,prev=root.getAttribute('data-theme');root.setAttribute('data-theme','light');
+  const cs=getComputedStyle(root);let str=new XMLSerializer().serializeToString(svg);
+  str=str.replace(/var\((--[\w-]+)\)/g,(m,v)=>cs.getPropertyValue(v).trim()||'#13213D');
+  if(prev==null)root.removeAttribute('data-theme');else root.setAttribute('data-theme',prev);
+  str=str.replace('<svg','<svg font-family="Helvetica, Arial, sans-serif"');
+  const vb=svg.viewBox.baseVal,w=vb.width,h=vb.height;
+  const url=URL.createObjectURL(new Blob([str],{type:'image/svg+xml;charset=utf-8'}));
+  const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});
+  const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+  return {data:c.toDataURL('image/png'),w,h};
+}
+async function addChart(doc,svg,y){
+  if(!svg)return y;const im=await svgImage(svg);const W=doc.internal.pageSize.getWidth()-80,h=W*im.h/im.w;
+  doc.addImage(im.data,'PNG',40,y,W,h);return y+h+12;
+}
+const pdfName=parts=>parts.filter(Boolean).map(p=>slugify(String(p))).join('-')+'.pdf';
+const slugify=s=>fold(s).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function mvText(d,r){
+  if(r[5]==='asc')return 'Asciende';if(r[5]==='desc')return 'Desciende';
+  const dm=divMove(d,r);if(dm)return `${dm.up?'Sube':'Baja'} de ${dm.from}`;
+  if(!d._prev)return '';const p=d._prev._map.get(r[1]);if(!p)return 'Nuevo';
+  const x=p[0]-r[0];return x>0?`+${x}`:x<0?String(x):'=';
+}
+function ptsText(d,r){const pp=prevPoints(d,r);if(!pp)return '';const x=Math.round((r[4]-pp.v)*100)/100;return x>0?'+'+x:String(x)}
+async function pdfRanking(){
+  const sel=rankingSelection().filter(x=>x.rows.length),ex=extraMode(sel);
+  const filt=[F.circuit||'Todos los circuitos',F.div||null,F.gender?GENDER[F.gender]:null,F.club?'Club: '+F.club:null,F.q?'Búsqueda: '+F.q:null,F.stage==='latest'?'Última etapa':'Etapa '+(ROMAN[+F.stage]||F.stage)].filter(Boolean).join(' · ');
+  const doc=await newPdf(`Ranking Nacional ${F.season}`,filt);let y=doc._startY;
+  if(!sel.length){doc.setTextColor(...INK);doc.text('Ningún atleta coincide con estos filtros.',40,y)}
+  for(const {d,rows,all,hideBase} of sel){
+    if(y>doc.internal.pageSize.getHeight()-90){doc.addPage();y=50}
+    doc.setTextColor(...INK);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(groupLabel(d),40,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MUTED);
+    doc.text(`${d.circuit} ${d.season} · ${stageLabel(d)}${d.date?' · '+fmtDate(d.date):''} · ${d.rows.length} atletas${hideBase&&all.length>rows.length?` (${all.length-rows.length} en puntaje base, no incluidos)`:''}`,40,y+12);
+    const head=['Pos.','Mov.','Atleta','Club','Puntos','+Pts'].concat(ex?[ex.label]:[]).concat(['Carné']);
+    const body=rows.map(r=>{const e=ex?extraInfo(d,r):null;return [r[0],mvText(d,r),titleCase(r[2]),clubName(r[3]),r[4],ptsText(d,r)].concat(ex?[e?e.text+(e.stay?' (sigue)':e.up&&d.circuit==='Liga Menor'?' (sube)':''):'']:[]).concat([r[1].startsWith('n-')?'':r[1]])});
+    doc.autoTable({...tableStyle,head:[head],body,startY:y+20,columnStyles:{0:{halign:'right',cellWidth:30},4:{halign:'right'},5:{halign:'right'}}});
+    y=doc.lastAutoTable.finalY+22;
+  }
+  pdfFooters(doc);doc.save(pdfName(['ranking',F.season,F.circuit,F.div,F.gender&&GENDER[F.gender],F.club]));
+}
+async function pdfPlayer(){
+  const a=athletes.find(x=>x.carne===P.carne);if(!a)return;
+  const {list,inactive}=playerSeries(P.carne,+P.season);
+  const doc=await newPdf(titleCase(a.name),`${clubName(a.club)}${P.carne.startsWith('n-')?'':' · carné '+P.carne} · Temporada ${P.season} · ${list.length} ranking${list.length===1?'':'s'}`);
+  let y=await addChart(doc,$('#pchart svg'),doc._startY);
+  const stages=[...new Set(docs.filter(d=>d.season===+P.season).map(d=>d.stage))].sort((x,z)=>x-z);
+  doc.autoTable({...tableStyle,startY:y,head:[['Ranking'].concat(stages.map(s=>'Etapa '+(ROMAN[s]||s)))],
+    body:list.map(s=>[s.name].concat(stages.map(st=>{const p=s.pts.find(q=>q.stage===st);return p?`#${p.rank} / ${p.n}\n${p.points} pts${DIVIDED.has(s.circuit)?' · '+p.division.replace(/^Open /,''):''}`:'—'})))});
+  y=doc.lastAutoTable.finalY+14;
+  if(inactive.length){doc.setFontSize(8.5);doc.setTextColor(...MUTED);doc.text('También inscrito, sin resultados (solo puntaje base): '+inactive.join(', ')+'.',40,y)}
+  pdfFooters(doc);doc.save(pdfName(['jugador',a.name,P.season]));
+}
+async function pdfCompare(){
+  const list=compareSeries();if(!list.length)return;
+  const catName=(compareCats(C.season).find(c=>c.key===C.key)||{}).name||'';
+  const doc=await newPdf(`Comparación · ${catName} ${C.season}`,list.map(s=>s.name).join(' · '));
+  let y=await addChart(doc,$('#cchart svg'),doc._startY);
+  for(const t of document.querySelectorAll('#cbody table')){
+    doc.autoTable({...tableStyle,html:t,startY:y,useCss:false,didParseCell:c=>{c.cell.text=c.cell.text.map(x=>x.replace(/\s+/g,' ').trim())}});
+    y=doc.lastAutoTable.finalY+16;
+  }
+  pdfFooters(doc);doc.save(pdfName(['comparacion',catName,C.season]));
+}
+async function pdfClubs(){
+  const rows=clubRows();
+  const doc=await newPdf(`Clubes · ${K.season}`,`${K.circuit||'Todos los circuitos'} · última etapa de cada ranking${K.q?' · búsqueda: '+K.q:''}`);
+  doc.autoTable({...tableStyle,startY:doc._startY,head:[['#','Club','Jugadores','Top 3','Top 10','Mejor resultado']],
+    body:rows.map(x=>[x.pos,x.club,x.nPlayers,x.top3,x.top10,x.best?`#${x.best.rank} ${x.best.label} · ${x.best.name}`:''])});
+  const detail=rows.length===1?rows[0]:rows.find(x=>x.club===K.open);
+  if(detail){
+    let y=doc.lastAutoTable.finalY+22;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...INK);doc.text(`Jugadores de ${detail.club}`,40,y);
+    doc.autoTable({...tableStyle,startY:y+8,head:[['Pos.','Atleta','Ranking','Circuito','Puntos']],body:detail.entries.map(e=>[`#${e.rank} / ${e.n}`,e.name,e.label,e.circuit,e.points])});
+  }
+  pdfFooters(doc);doc.save(pdfName(['clubes',K.season,K.circuit,detail&&detail.club]));
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-pdf]');if(!b)return;
+  const label=b.textContent;b.disabled=true;b.textContent='Generando PDF…';
+  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs,calc:pdfCalc,att:pdfAtt})[b.dataset.pdf]();b.textContent=label}
+  catch(err){console.error(err);b.textContent='No se pudo generar el PDF'}
+  finally{b.disabled=false;setTimeout(()=>{b.textContent=label},2500)}
+});
+/* ---------- Calculadora (reglas FECOTEME: https://fecoteme.com/calculadora/) ---------- */
+const CALC_EXPECTED=[[50,8,5],[100,6,4],[250,4,3],[500,3,2],[1000,2,1],[Infinity,0,0]];   // favorite (more points) wins
+const CALC_UPSET=[[100,10,5],[250,15,8],[500,20,10],[1000,25,15],[Infinity,30,20]];        // underdog wins, or equal points
+function matchPoints(winner,loser){
+  const diff=Math.abs(winner-loser),expected=winner>loser;
+  const row=(expected?CALC_EXPECTED:CALC_UPSET).find(r=>diff<=r[0]);
+  return {gain:row[1],loss:row[2],diff,expected};
+}
+const Q={mode:'pts',season:null,key:null,me:null,rival:null,a:'',b:''};
+function calcDocs(){return docs.filter(d=>d.season===Q.season&&seriesKey(d)===Q.key)}
+// latest points (and position) of every player in the chosen ranking; Liga Mayor spans all divisions
+function calcPool(){
+  const ds=calcDocs();if(!ds.length)return {pool:new Map(),stage:null,list:[]};
+  const stage=Math.max(...ds.map(d=>d.stage)),last=ds.filter(d=>d.stage===stage),pool=new Map();
+  for(const d of last)for(const r of d.rows)pool.set(r[1],{carne:r[1],name:titleCase(r[2]),club:clubName(r[3]),points:r[4],rank:r[0],division:d.division,f:fold(r[2]),base:d._base!=null&&r[4]===d._base});
+  const list=[...pool.values()].sort((x,y)=>y.points-x.points);
+  return {pool,stage,list};
+}
+function buildCalcOptions(){
+  const seasons=uniq(d=>d.season).sort((a,b)=>b-a);Q.season=seasons[0];   // current season only
+  $('#qseason').innerHTML=seasons.map(s=>`<option value="${s}">${s}</option>`).join('');$('#qseason').value=String(Q.season);$('#qyear').textContent=Q.season;
+  const cats=compareCats(Q.season);if(!cats.some(c=>c.key===Q.key))Q.key=(cats.find(c=>c.name==='U13 Masc')||cats[0]||{}).key;
+  $('#qcat').innerHTML=cats.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');$('#qcat').value=Q.key||'';
+  const {pool}=calcPool();
+  if(Q.me&&!pool.has(Q.me))Q.me=null;if(Q.rival&&!pool.has(Q.rival))Q.rival=null;
+  $('#qme').value=Q.me?pool.get(Q.me).name:'';$('#qrival').value=Q.rival?pool.get(Q.rival).name:'';
+  $('#qa').value=Q.a;$('#qb').value=Q.b;
+  document.querySelectorAll('[data-qmode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.qmode===Q.mode)));
+  $('#qpts').hidden=Q.mode!=='pts';$('#qnames').hidden=Q.mode!=='names';
+}
+function showCalcSugg(which){
+  const inp=$(which==='me'?'#qme':'#qrival'),box=$(which==='me'?'#qsugg1':'#qsugg2'),q=fold(inp.value).trim();box.innerHTML='';
+  const other=which==='me'?Q.rival:Q.me;
+  const hits=calcPool().list.filter(a=>a.carne!==other&&(!q||a.f.includes(q)||a.carne.startsWith(q))).sort((x,y)=>(x.base-y.base)||(y.points-x.points)).slice(0,8);
+  if(!hits.length){box.hidden=true;return}
+  for(const a of hits){const b=document.createElement('button');b.type='button';b.dataset.carne=a.carne;
+    const l=document.createElement('span');l.textContent=a.name;const s=document.createElement('small');s.textContent=`${a.points} pts · ${a.club}`;b.append(l,s);box.append(b)}
+  box.hidden=false;
+}
+// position the player would have in the latest list with new points (Liga Mayor: within the division)
+function newPosition(list,carne,pts,division){
+  const scope=list.filter(x=>x.carne!==carne&&(!DIVIDED.has(calcCircuit())||x.division===division));
+  return 1+scope.filter(x=>x.points>pts).length;
+}
+const calcCircuit=()=>calcDocs()[0]?.circuit;
+function renderCalc(){
+  const out=$('#qout');
+  let me,rival,names=Q.mode==='names',list=[];
+  if(names){
+    const P2=calcPool();list=P2.list;me=Q.me&&P2.pool.get(Q.me);rival=Q.rival&&P2.pool.get(Q.rival);
+    if(!me||!rival){out.innerHTML='<div class="pempty">Elija el ranking y los dos jugadores para ver qué pasa si gana o si pierde.</div>';return}
+  }else{
+    const a=parseFloat(Q.a),b=parseFloat(Q.b);
+    if(!isFinite(a)||!isFinite(b)){out.innerHTML='<div class="pempty">Escriba sus puntos y los del rival para ver qué pasa si gana o si pierde.</div>';return}
+    me={name:'Usted',points:a};rival={name:'Rival',points:b};
+  }
+  const win=matchPoints(me.points,rival.points),lose=matchPoints(rival.points,me.points);
+  const fav=me.points>rival.points?'Usted es favorito':me.points<rival.points?'El rival es favorito':'Mismos puntos';
+  const favTxt=names?(me.points>rival.points?`${esc(me.name)} es favorito`:me.points<rival.points?`${esc(rival.name)} es favorito`:'Mismos puntos'):fav;
+  const pos=(p,pts)=>names?` <small class="club">· posición #${p.rank} → #${newPosition(list,p.carne,pts,p.division)}${DIVIDED.has(calcCircuit())?' en '+esc(p.division):''}</small>`:'';
+  const line=(p,delta)=>`<div class="qline"><span>${esc(p.name)}</span><b>${delta>0?'+':''}${delta}</b><span class="club">${p.points} → <b>${p.points+delta}</b> pts${pos(p,p.points+delta)}</span></div>`;
+  const note=r=>r.expected?'Resultado esperado: gana el favorito.':'Resultado inesperado: gana quien tiene menos puntos (o empatados en puntos).';
+  const first=names?' '+esc(me.name.split(' ')[0]):'';
+  out.innerHTML=`<div class="qhead"><span class="tag">Diferencia: ${win.diff} puntos</span><span class="tag">${favTxt}</span><button class="chip pdfbtn" data-pdf="calc">Descargar PDF</button></div>
+    <div class="qgrid">
+      <div class="qcard win"><h3>Si gana${first}</h3>${line(me,win.gain)}${line(rival,-win.loss)}<p class="pct">${note(win)}</p></div>
+      <div class="qcard lose"><h3>Si pierde${first}</h3>${line(me,-lose.loss)}${line(rival,lose.gain)}<p class="pct">${note(lose)}</p></div>
+    </div>`;
+}
+document.querySelectorAll('[data-qmode]').forEach(b=>b.addEventListener('click',()=>{
+  Q.mode=b.dataset.qmode;
+  if(Q.mode==='pts'){Q.me=null;Q.rival=null}else{Q.a='';Q.b=''}   // the two ways are exclusive
+  buildCalcOptions();renderCalc()}));
+$('#qa').addEventListener('input',e=>{Q.a=e.target.value;renderCalc()});
+$('#qb').addEventListener('input',e=>{Q.b=e.target.value;renderCalc()});
+$('#qseason').addEventListener('change',e=>{Q.season=+e.target.value;buildCalcOptions();renderCalc()});
+$('#qcat').addEventListener('change',e=>{Q.key=e.target.value;Q.me=null;Q.rival=null;buildCalcOptions();renderCalc()});
+for(const [which,inpSel,boxSel] of [['me','#qme','#qsugg1'],['rival','#qrival','#qsugg2']]){
+  const inp=$(inpSel),box=$(boxSel);
+  inp.addEventListener('focus',()=>showCalcSugg(which));
+  inp.addEventListener('input',()=>{if(!inp.value.trim()){Q[which]=null;renderCalc()}showCalcSugg(which)});
+  inp.addEventListener('keydown',e=>{const items=[...box.querySelectorAll('button')];if(box.hidden||!items.length)return;
+    let k=items.findIndex(b=>b.classList.contains('act'));
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[k]?.classList.remove('act');k=e.key==='ArrowDown'?Math.min(items.length-1,k+1):Math.max(0,k-1);items[k].classList.add('act')}
+    else if(e.key==='Enter'){e.preventDefault();(items[k]||items[0]).click()}else if(e.key==='Escape')box.hidden=true});
+  box.addEventListener('click',e=>{const b=e.target.closest('button[data-carne]');if(!b)return;Q[which]=b.dataset.carne;inp.value=b.querySelector('span').textContent;box.hidden=true;renderCalc()});
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#view-calc .psearch'))document.querySelectorAll('#view-calc .sugg').forEach(x=>x.hidden=true)});
+async function pdfCalc(){
+  const names=Q.mode==='names',catName=(compareCats(Q.season).find(c=>c.key===Q.key)||{}).name||'';
+  const doc=await newPdf('Calculadora de puntos',names?`${catName} ${Q.season} · ${$('#qme').value} vs ${$('#qrival').value}`:`Por puntos: ${Q.a} vs ${Q.b}`);
+  let y=doc._startY;doc.setTextColor(...INK);doc.setFontSize(10);
+  const head=[...document.querySelectorAll('#qout .qhead .tag')].map(t=>t.textContent).join(' · ');doc.text(head,40,y);y+=12;
+  for(const c of document.querySelectorAll('#qout .qcard')){
+    const rows=[...c.querySelectorAll('.qline')].map(l=>[...l.children].map(x=>x.textContent.replace(/\s+/g,' ').replace(/→/g,'->').trim()));
+    doc.autoTable({...tableStyle,startY:y+6,head:[[c.querySelector('h3').textContent,'Cambio','Puntos']],body:rows});
+    y=doc.lastAutoTable.finalY+4;doc.setFontSize(8.5);doc.setTextColor(...MUTED);doc.text(c.querySelector('.pct').textContent,40,y+8);y+=18;
+  }
+  doc.autoTable({...tableStyle,startY:y+6,head:[['Diferencia de puntos','Gana el favorito: ganador / perdedor','Diferencia','Gana el de menos puntos: ganador / perdedor']],
+    body:[['1 - 50','+8 / -5','0 - 100','+10 / -5'],['51 - 100','+6 / -4','101 - 250','+15 / -8'],['101 - 250','+4 / -3','251 - 500','+20 / -10'],['251 - 500','+3 / -2','501 - 1000','+25 / -15'],['501 - 1000','+2 / -1','1001 o más','+30 / -20'],['1001 o más','0 / 0','','']]});
+  pdfFooters(doc);doc.save(pdfName(['calculadora',names?$('#qme').value:Q.a,names?$('#qrival').value:Q.b]));
+}
+/* ---------- Asistencia a entrenamientos (privado, Firebase) ---------- */
+const ATT_ST={P:'Presente',A:'Ausente',J:'Justificado',T:'Tarde'};
+const ATT_CATS=['U9 Fem','U9 Masc','U11 Fem','U11 Masc','U13 Fem','U13 Masc','U15 Fem','U15 Masc','U19 Fem','U19 Masc','Open Fem','Master','PTT','Otros'];
+const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return isoDay(d)};
+const fmtDay=iso=>new Date(iso+'T12:00:00').toLocaleDateString('es-CR',{weekday:'short',day:'numeric',month:'short'});
+const A={store:null,user:null,coach:null,club:null,view:'roll',date:isoDay(new Date()),cats:null,repCats:null,from:null,to:null,who:'',session:{marks:{}},sessions:new Map(),extra:[],roster:[],unwatch:null,started:false};
+const FB_V='10.12.2',FB_LIBS=['app','auth','firestore'].map(m=>`https://www.gstatic.com/firebasejs/${FB_V}/firebase-${m}-compat.js`);
+const sessId=(club,date)=>slugify(club)+'__'+date;
+async function firebaseStore(cfg){
+  for(const src of FB_LIBS)await loadScript(src);
+  const fb=window.firebase;if(!fb.apps.length)fb.initializeApp(cfg);
+  const auth=fb.auth(),db=fb.firestore(),FV=fb.firestore.FieldValue;
+  const ref=(club,date)=>db.collection('attendance').doc(sessId(club,date));
+  const stamp=who=>({updatedBy:who,updatedAt:FV.serverTimestamp()});
+  return {
+    onAuth:cb=>auth.onAuthStateChanged(cb),
+    signIn:(e,p)=>auth.signInWithEmailAndPassword(e,p),signOut:()=>auth.signOut(),reset:e=>auth.sendPasswordResetEmail(e),
+    coach:async uid=>{const s=await db.collection('coaches').doc(uid).get();return s.exists?s.data():null},
+    sessions:async club=>(await db.collection('attendance').where('club','==',club).get()).docs.map(d=>d.data()),
+    watch:(club,date,cb)=>ref(club,date).onSnapshot(s=>cb(s.exists?s.data():null),()=>{}),
+    setMarks:(club,date,marks,who)=>{const m={};for(const k in marks)m[k]=marks[k]===null?FV.delete():marks[k];return ref(club,date).set({club,date,marks:m,...stamp(who)},{merge:true})},
+    setCancelled:(club,date,v,who)=>ref(club,date).set({club,date,cancelled:v,...stamp(who)},{merge:true}),
+    athletes:async club=>(await db.collection('athletes').where('club','==',club).get()).docs.map(d=>({id:d.id,...d.data()})),
+    addAthlete:(club,a,who)=>db.collection('athletes').add({...a,club,createdBy:who,createdAt:FV.serverTimestamp()}),
+  };
+}
+// In-memory stand-in used only for testing the screens (window.ATT_MOCK = true)
+function mockStore(){
+  const S=new Map(),X=[];let cb=null;
+  return {onAuth:f=>{cb=f;setTimeout(()=>f(null),0)},
+    signIn:async(e,p)=>{if(p!=='prueba')throw {code:'auth/wrong-password'};cb({uid:'u1',email:e})},signOut:async()=>cb(null),reset:async()=>{},
+    coach:async()=>({club:window.ATTENDANCE_CLUB||'Curridabat',name:'Entrenador de prueba'}),
+    sessions:async club=>[...S.values()].filter(s=>s.club===club).map(s=>JSON.parse(JSON.stringify(s))),
+    watch:()=>()=>{},
+    setMarks:async(club,date,marks)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};for(const c in marks){if(marks[c]===null)delete s.marks[c];else s.marks[c]=marks[c]}S.set(k,s)},
+    setCancelled:async(club,date,v)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};s.cancelled=v;S.set(k,s)},
+    athletes:async club=>X.filter(a=>a.club===club),addAthlete:async(club,a)=>{X.push({id:'m'+X.length,...a,club})}};
+}
+// Roster: athletes whose most recent ranking row (current season) lists this club; category = age category
+function attCategory(carne,season){
+  for(const g of ['F','M']){const i=ageLow.get(season)?.get(carne+'|'+g);if(i!=null)return `${MENOR_ORDER[i]} ${g==='F'?'Fem':'Masc'}`}
+  const inC=c=>docs.some(d=>d.season===season&&d.circuit===c&&d._map.has(carne));
+  return inC('Open Femenino')?'Open Fem':inC('Master')?'Master':inC('PTT')?'PTT':inC('Liga Mayor')?null:'Otros';
+}
+function buildRoster(){
+  const season=Math.max(...docs.map(d=>d.season)),club=fold(A.club),last=new Map();
+  for(const d of docs.filter(x=>x.season===season).sort((a,b)=>a.stage-b.stage))for(const r of d.rows)last.set(r[1],r);
+  const roster=[];
+  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const cat=attCategory(carne,season);if(cat)roster.push({id:carne,carne,name:titleCase(r[2]),cat})}
+  for(const x of A.extra)roster.push({id:'x-'+x.id,carne:'',name:titleCase(x.name),cat:x.cat||'Otros',extra:true});
+  roster.sort((a,b)=>ATT_CATS.indexOf(a.cat)-ATT_CATS.indexOf(b.cat)||a.name.localeCompare(b.name,'es'));
+  A.roster=roster;
+}
+const attCatsPresent=()=>ATT_CATS.filter(c=>A.roster.some(a=>a.cat===c));
+function renderCatPick(el,sel,onChange){
+  const cats=attCatsPresent(),all=!sel||sel.size===0;
+  const label=all?'Todas las categorías':[...sel].join(', ');
+  const wasOpen=el.querySelector('details')?.open;
+  el.innerHTML=`<details${wasOpen?' open':''}><summary>${esc(label)}</summary><div class="catlist"><label class="catall"><input type="checkbox" data-all${all?' checked':''}> Todas</label>${cats.map(c=>`<label><input type="checkbox" value="${esc(c)}"${!all&&sel.has(c)?' checked':''}> ${esc(c)}</label>`).join('')}</div></details>`;
+  el.querySelector('.catlist').addEventListener('change',e=>{
+    const t=e.target;let next;
+    if(t.hasAttribute('data-all'))next=null;
+    else{next=new Set([...el.querySelectorAll('input[value]:checked')].map(i=>i.value));if(!next.size)next=null}
+    onChange(next);
+  });
+}
+const inCats=(a,sel)=>!sel||sel.size===0||sel.has(a.cat);
+function attSaveCats(){try{localStorage.setItem('att-cats',JSON.stringify({roll:A.cats?[...A.cats]:null,rep:A.repCats?[...A.repCats]:null}))}catch(e){}}
+function attLoadCats(){try{const v=JSON.parse(localStorage.getItem('att-cats')||'null');if(v){A.cats=v.roll?new Set(v.roll):null;A.repCats=v.rep?new Set(v.rep):null}}catch(e){}}
+/* ---- start / login ---- */
+async function attStart(){
+  if(A.started)return;A.started=true;
+  const cfg=window.FIREBASE_CONFIG;A.club=window.ATTENDANCE_CLUB||'Curridabat';
+  if(!window.ATT_MOCK&&(!cfg||!cfg.apiKey)){$('#attSetup').hidden=false;return}
+  try{A.store=window.ATT_MOCK?mockStore():await firebaseStore(cfg)}catch(e){console.error(e);$('#attSetup').hidden=false;$('#attSetup p').textContent='No se pudo cargar Firebase. Revise la conexión a internet y recargue la página.';return}
+  attLoadCats();
+  A.store.onAuth(async user=>{
+    A.user=user;if(A.unwatch){A.unwatch();A.unwatch=null}
+    if(!user){$('#attApp').hidden=true;$('#attLogin').hidden=false;return}
+    const coach=await A.store.coach(user.uid).catch(()=>null);
+    if(!coach||!coach.club){$('#attLoginMsg').className='msg err';$('#attLoginMsg').textContent='Este usuario no está autorizado como entrenador. Pida acceso al administrador.';await A.store.signOut();return}
+    A.coach=coach;A.club=coach.club;
+    $('#attLogin').hidden=true;$('#attApp').hidden=false;
+    $('#attClub').textContent=A.club;$('#attWho').textContent='· '+(coach.name||user.email);
+    A.extra=await A.store.athletes(A.club).catch(()=>[]);buildRoster();
+    await attReloadSessions();attOpenDate(A.date);attRender();
+  });
+}
+async function attReloadSessions(){const list=await A.store.sessions(A.club).catch(()=>[]);A.sessions=new Map(list.map(s=>[s.date,s]))}
+function attOpenDate(date){
+  A.date=date;$('#attDate').value=date;A.session=A.sessions.get(date)||{date,club:A.club,marks:{}};A.session.marks=A.session.marks||{};
+  if(A.unwatch)A.unwatch();
+  A.unwatch=A.store.watch(A.club,date,s=>{if(s&&A.date===date){A.session={...s,marks:s.marks||{}};A.sessions.set(date,A.session);if(A.view==='roll')attRenderRoll()}});
+}
+$('#attLoginForm').addEventListener('submit',async e=>{e.preventDefault();const m=$('#attLoginMsg');m.className='msg';m.textContent='Ingresando…';
+  try{await A.store.signIn($('#attEmail').value.trim(),$('#attPass').value);m.textContent='';$('#attPass').value=''}
+  catch(err){m.className='msg err';m.textContent=/user-not-found|wrong-password|invalid-credential|invalid-email/.test(err.code||'')?'Correo o contraseña incorrectos.':err.code==='auth/too-many-requests'?'Demasiados intentos. Espere unos minutos e intente de nuevo.':'No se pudo ingresar. Revise la conexión e intente de nuevo.'}});
+$('#attForgot').addEventListener('click',async()=>{const m=$('#attLoginMsg'),em=$('#attEmail').value.trim();
+  if(!em){m.className='msg err';m.textContent='Escriba su correo y vuelva a presionar «Olvidé mi contraseña».';return}
+  try{await A.store.reset(em);m.className='msg ok';m.textContent='Le enviamos un correo para cambiar la contraseña.'}catch(err){m.className='msg err';m.textContent='No se pudo enviar el correo. Revise la dirección.'}});
+$('#attLogout').addEventListener('click',()=>A.store.signOut());
+document.querySelectorAll('[data-attview]').forEach(b=>b.addEventListener('click',async()=>{A.view=b.dataset.attview;if(A.view==='report')await attReloadSessions();attRender()}));
+function attRender(){
+  document.querySelectorAll('[data-attview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.attview===A.view)));
+  $('#attRoll').hidden=A.view!=='roll';$('#attReport').hidden=A.view!=='report';
+  if(A.view==='roll')attRenderRoll();else attRenderReport();
+}
+/* ---- Pasar lista ---- */
+function attRenderRoll(){
+  renderCatPick($('#catpickRoll'),A.cats,s=>{A.cats=s;attSaveCats();attRenderRoll()});
+  const shown=A.roster.filter(a=>inCats(a,A.cats)),marks=A.session.marks||{},cancelled=!!A.session.cancelled;
+  const c={P:0,A:0,J:0,T:0,none:0};shown.forEach(a=>{const m=marks[a.id];if(m)c[m]++;else c.none++});
+  $('#attCounts').textContent=`${shown.length} atletas · ${c.P} presentes · ${c.T} tarde · ${c.J} justificados · ${c.A} ausentes · ${c.none} sin marcar`;
+  $('#attCancel').setAttribute('aria-pressed',String(cancelled));$('#attAllPresent').disabled=cancelled||!c.none;
+  $('#attNewCat').innerHTML=ATT_CATS.map(x=>`<option>${esc(x)}</option>`).join('');
+  if(cancelled){$('#attList').innerHTML=`<div class="attcancelled">Sesión del ${esc(fmtDay(A.date))} marcada como cancelada: no cuenta para los porcentajes. Presione «Sesión cancelada» otra vez para reactivarla.</div>`;return}
+  if(!shown.length){$('#attList').innerHTML='<div class="pempty">No hay atletas en estas categorías.</div>';return}
+  let h='',cur=null;
+  for(const a of shown){
+    if(a.cat!==cur){cur=a.cat;h+=`<div class="attgrp">${esc(cur)}</div>`}
+    const m=marks[a.id];
+    h+=`<div class="attrow" data-id="${esc(a.id)}"><div class="nm">${esc(a.name)} <small>${a.carne?'carné '+esc(a.carne):'sin carné'}</small></div><div class="seg" role="group" aria-label="Asistencia de ${esc(a.name)}">${['P','A','J','T'].map(s=>`<button type="button" data-st="${s}" aria-pressed="${m===s}" title="${ATT_ST[s]}">${s==='J'?'Justif.':ATT_ST[s]}</button>`).join('')}</div></div>`;
+  }
+  $('#attList').innerHTML=h;
+}
+async function attWrite(marks){
+  const saved=$('#attSaved');saved.textContent='Guardando…';
+  try{await A.store.setMarks(A.club,A.date,marks,A.user.email);saved.textContent='Guardado ✓'}
+  catch(e){console.error(e);saved.textContent='No se pudo guardar. Revise la conexión.'}
+}
+$('#attList').addEventListener('click',e=>{
+  const b=e.target.closest('.seg button');if(!b)return;const id=b.closest('.attrow').dataset.id,st=b.dataset.st;
+  const cur=A.session.marks[id],next=cur===st?null:st;
+  if(next)A.session.marks[id]=next;else delete A.session.marks[id];
+  A.sessions.set(A.date,A.session);attRenderRoll();attWrite({[id]:next});
+});
+$('#attDate').addEventListener('change',e=>{if(e.target.value){attOpenDate(e.target.value);attRenderRoll()}});
+$('#attAllPresent').addEventListener('click',()=>{const m={};for(const a of A.roster.filter(x=>inCats(x,A.cats)))if(!A.session.marks[a.id]){m[a.id]='P';A.session.marks[a.id]='P'}A.sessions.set(A.date,A.session);attRenderRoll();attWrite(m)});
+$('#attCancel').addEventListener('click',async()=>{A.session.cancelled=!A.session.cancelled;A.sessions.set(A.date,A.session);attRenderRoll();
+  try{await A.store.setCancelled(A.club,A.date,A.session.cancelled,A.user.email);$('#attSaved').textContent='Guardado ✓'}catch(e){$('#attSaved').textContent='No se pudo guardar. Revise la conexión.'}});
+$('#attAddAthlete').addEventListener('click',()=>{$('#attAddForm').hidden=!$('#attAddForm').hidden;$('#attNewName').focus()});
+$('#attNewCancel').addEventListener('click',()=>{$('#attAddForm').hidden=true});
+$('#attNewSave').addEventListener('click',async()=>{const name=$('#attNewName').value.trim();if(!name)return;
+  try{await A.store.addAthlete(A.club,{name,cat:$('#attNewCat').value},A.user.email);A.extra=await A.store.athletes(A.club);buildRoster();$('#attNewName').value='';$('#attAddForm').hidden=true;attRenderRoll()}
+  catch(e){$('#attSaved').textContent='No se pudo agregar el atleta.'}});
+/* ---- Reporte ---- */
+// Liga Menor ranking overview: every Liga Menor list the athlete is in this season (own age category first),
+// latest stage of each list, position change vs the previous stage of that list.
+function attRanking(a){
+  if(!a||!a.carne||!/^U\d/.test(a.cat))return null;
+  const season=Math.max(...docs.map(d=>d.season)),out=[];
+  for(const [k,arr] of byCat){
+    const inSeason=arr.filter(d=>d.season===season&&d.circuit==='Liga Menor');if(!inSeason.length)continue;
+    const d=inSeason[inSeason.length-1],r=d._map.get(a.carne);if(!r)continue;
+    const p=d._prev?d._prev._map.get(a.carne):null,pp=prevPoints(d,r);
+    out.push({d,name:seriesName(d),own:seriesName(d)===a.cat,rank:r[0],n:activeCount(d),points:r[4],base:d._base!=null&&r[4]===d._base,
+      prevRank:p?p[0]:null,prevStage:d._prev?`Etapa ${ROMAN[d._prev.stage]||d._prev.stage}${d._prev.season!==season?' '+d._prev.season:''}`:null,
+      dPts:pp?r[4]-pp.v:null,order:MENOR_ORDER.indexOf(d.division)});
+  }
+  out.sort((x,y)=>(y.own-x.own)||x.order-y.order);
+  return out;
+}
+const rkMove=x=>x.base?{t:'Sin resultados',c:'eq'}:x.prevRank==null?(x.prevStage?{t:'Nuevo',c:'new'}:{t:'–',c:'eq'}):x.prevRank>x.rank?{t:'▲ '+(x.prevRank-x.rank),c:'up'}:x.prevRank<x.rank?{t:'▼ '+(x.rank-x.prevRank),c:'down'}:{t:'=',c:'eq'};
+function attRankingCard(a){
+  const R=attRanking(a);if(R==null)return '';
+  const season=Math.max(...docs.map(d=>d.season));
+  if(!R.length)return `<div class="pcard"><h3 class="atth3">Ranking Liga Menor ${season}</h3><p class="pct">No aparece en los rankings de Liga Menor publicados este año.</p></div>`;
+  const main=R[0],mv=rkMove(main);
+  return `<div class="pcard"><h3 class="atth3">Ranking Liga Menor ${season}</h3>
+    <p class="pct" style="margin:0 0 8px">${esc(main.name)} · Etapa ${ROMAN[main.d.stage]||main.d.stage}${main.own?' · su categoría':''}</p>
+    <div class="cards rkcards"><div class="card"><b>${main.points}</b><span>Puntos${main.dPts?` <em class="mv ${main.dPts>0?'up':'down'}">${main.dPts>0?'+':''}${main.dPts}</em>`:''}</span></div>
+      <div class="card"><b>${main.base?'—':'#'+main.rank}</b><span>${main.base?'Sin posición':'Posición de '+main.n}</span></div>
+      <div class="card"><b>${main.base?'—':`<span class="mv ${mv.c}">${mv.t}</span>`}</b><span>${main.base?'Aún sin resultados':main.prevRank!=null?`Antes #${main.prevRank} (${esc(main.prevStage)})`:main.prevStage?`No estaba en ${esc(main.prevStage)}`:'Primera etapa'}</span></div></div>
+    ${main.base?'<p class="pct">Tiene el puntaje inicial de la categoría: todavía no hay resultados suyos en este ranking.</p>':''}
+    ${R.length>1?`<table class="rktbl"><thead><tr><th>Categoría</th><th class="num">Puntos</th><th class="num">Posición</th><th class="num">Cambio</th></tr></thead><tbody>${R.map(x=>{const m=rkMove(x);return `<tr><td>${esc(x.name)}${x.own?' <small>(su categoría)</small>':''}<br><small>Etapa ${ROMAN[x.d.stage]||x.d.stage}</small></td><td class="num">${x.points}</td><td class="num">${x.base?'—':`#${x.rank} <small>de ${x.n}</small>`}</td><td class="num"><span class="mv ${m.c}">${m.t}</span></td></tr>`}).join('')}</tbody></table><p class="pct">También juega en categorías mayores; el cambio compara con la etapa anterior de cada ranking.</p>`:''}
+  </div>`;
+}
+function attStats(a,sessions){
+  const s={P:0,A:0,J:0,T:0,days:[]};
+  for(const x of sessions){const m=x.marks?.[a.id];if(m){s[m]++;s.days.push({date:x.date,st:m})}}
+  const base=s.P+s.T+s.A;s.total=s.days.length;s.pct=base?Math.round(100*(s.P+s.T)/base):null;
+  let streak=0;for(let i=s.days.length-1;i>=0;i--){const st=s.days[i].st;if(st==='J')continue;if(st==='P'||st==='T')streak++;else break}s.streak=streak;
+  return s;
+}
+function attRangeSessions(){return [...A.sessions.values()].filter(s=>!s.cancelled&&s.date>=A.from&&s.date<=A.to).sort((a,b)=>a.date<b.date?-1:1)}
+function attRankCell(a){const R=attRanking(a);if(!R||!R.length)return '<span class="club">—</span>';const x=R[0],m=rkMove(x);if(x.base)return '<span class="club" title="Tiene el puntaje inicial: aún sin resultados en el ranking">Sin resultados</span>';return `#${x.rank} <span class="mv ${m.c}">${m.t}</span>`}
+const pctChip=p=>p==null?'—':`<span class="pctchip ${p<70?'lo':p>=90?'hi':''}">${p}%</span>`;
+function attRenderReport(){
+  if(!A.to)A.to=isoDay(new Date());if(!A.from)A.from=addDays(A.to,-30);
+  $('#attFrom').value=A.from;$('#attTo').value=A.to;
+  renderCatPick($('#catpickRep'),A.repCats,s=>{A.repCats=s;attSaveCats();A.who='';attRenderReport()});
+  const people=A.roster.filter(a=>inCats(a,A.repCats));
+  if(A.who&&!people.some(a=>a.id===A.who))A.who='';
+  $('#attWhoSel').innerHTML='<option value="">Todos</option>'+[...people].sort((a,b)=>a.name.localeCompare(b.name,'es')).map(a=>`<option value="${esc(a.id)}"${a.id===A.who?' selected':''}>${esc(a.name)}</option>`).join('');
+  const sessions=attRangeSessions(),body=$('#attRepBody');
+  const legend=`<div class="attlegend"><span><span class="stcell P">P</span> Presente</span><span><span class="stcell T">T</span> Tarde</span><span><span class="stcell J">J</span> Justificado</span><span><span class="stcell A">A</span> Ausente</span><span>% de asistencia = (presente + tarde) ÷ (presente + tarde + ausente); lo justificado no cuenta.</span></div>`;
+  if(!sessions.length){body.innerHTML=`<div class="pempty">No hay sesiones registradas entre el ${esc(fmtDay(A.from))} y el ${esc(fmtDay(A.to))}.</div>`;return}
+  if(A.who){
+    const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
+    body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0">${esc(a.name)} · ${esc(a.cat)} · ${esc(fmtDay(A.from))} – ${esc(fmtDay(A.to))}</span><button class="chip pdfbtn" data-pdf="att">Descargar PDF</button></div>
+      <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+        <div class="card"><b>${st.pct==null?'—':st.pct+'%'}</b><span>Asistencia</span></div>
+        <div class="card"><b>${st.P+st.T}</b><span>Días asistidos (${st.T} tarde)</span></div>
+        <div class="card"><b>${st.A}</b><span>Ausencias</span></div>
+        <div class="card"><b>${st.J}</b><span>Justificadas</span></div>
+        <div class="card"><b>${st.streak}</b><span>Racha actual</span></div></div>
+      <div class="${attRanking(a)?'attside':''}"><div class="pcard"><h3 style="font-family:var(--display);margin:0 0 4px">Días de entrenamiento</h3>${legend}
+        <div class="strip">${sessions.map(x=>{const m=x.marks?.[a.id];return `<div class="day" title="${esc(fmtDay(x.date))}: ${m?ATT_ST[m]:'sin marcar'}"><div class="sq ${m||''}" style="${m?'':'background:var(--surface-2);color:var(--muted)'}">${m||'·'}</div>${esc(new Date(x.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'short'}))}</div>`}).join('')}</div>
+        <p class="pct">Cada cuadro es una sesión registrada del periodo; «·» = sesión en la que no se le pasó lista.</p></div>${attRankingCard(a)}</div>
+      <div class="tblwrap ptable"><table><thead><tr><th>Fecha</th><th>Asistencia</th></tr></thead><tbody>${st.days.slice().reverse().map(d=>`<tr><td>${esc(fmtDay(d.date))}</td><td><span class="stcell ${d.st}">${d.st}</span> ${ATT_ST[d.st]}</td></tr>`).join('')||'<tr><td colspan="2" class="empty">Sin registros en el periodo.</td></tr>'}</tbody></table></div>`;
+    return;
+  }
+  const rows=people.map(a=>({a,st:attStats(a,sessions)})).filter(x=>x.st.total);
+  rows.sort((x,y)=>(y.st.pct??-1)-(x.st.pct??-1)||x.a.name.localeCompare(y.a.name,'es'));
+  const low=rows.filter(x=>x.st.pct!=null&&x.st.pct<70).length;
+  body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0">${sessions.length} sesiones · ${rows.length} atletas con registros${low?` · <b style="color:var(--down)">${low} bajo 70%</b>`:''}</span><button class="chip pdfbtn" data-pdf="att">Descargar PDF</button></div>
+    <div class="pcard"><h3 style="font-family:var(--display);margin:0 0 4px">Asistencia por sesión</h3>${legend}<div class="pchart" id="attChart"></div></div>
+    <div class="tblwrap ptable"><table><thead><tr><th>Atleta</th><th>Categoría</th><th class="num">Sesiones</th><th class="num">Presente</th><th class="num">Tarde</th><th class="num">Justif.</th><th class="num">Ausente</th><th class="num">Asistencia</th><th class="num" title="Liga Menor: posición en su categoría y cambio vs la etapa anterior">Ranking</th></tr></thead><tbody>
+    ${rows.map(({a,st})=>`<tr class="row attpick" data-id="${esc(a.id)}"><td class="name">${esc(a.name)}</td><td class="club">${esc(a.cat)}</td><td class="num">${st.total}</td><td class="num">${st.P}</td><td class="num">${st.T}</td><td class="num">${st.J}</td><td class="num">${st.A}</td><td class="num">${pctChip(st.pct)}</td><td class="num">${attRankCell(a)}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros para estas categorías en el periodo.</td></tr>'}
+    </tbody></table></div><p class="note">Toque un atleta para ver todos sus días.</p>`;
+  attDrawChart(sessions,people);
+}
+function attDrawChart(sessions,people){
+  const host=$('#attChart');if(!host)return;
+  const ids=new Set(people.map(p=>p.id));
+  const data=sessions.map(s=>{const c={P:0,T:0,J:0,A:0};for(const id in s.marks||{})if(ids.has(id))c[s.marks[id]]++;return {date:s.date,c,n:c.P+c.T+c.J+c.A}});
+  const W=Math.max(320,host.clientWidth||700),H=230,L=34,R=10,T=10,B=34,iw=W-L-R,ih=H-T-B;
+  const max=Math.max(1,...data.map(d=>d.n)),bw=Math.max(4,Math.min(36,iw/data.length-4));
+  const x=i=>L+(i+.5)*iw/data.length,y=v=>T+ih-v/max*ih;
+  const colors={P:'var(--up)',T:'#C98500',J:'var(--muted)',A:'var(--down)'};
+  let g='';const step=Math.ceil(max/4);for(let t=0;t<=max;t+=step)g+=`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${t}</text>`;
+  const every=Math.ceil(data.length/10);
+  data.forEach((d,i)=>{let acc=0;for(const k of ['P','T','J','A']){const v=d.c[k];if(!v)continue;const y0=y(acc+v),h=y(acc)-y(acc+v);g+=`<rect x="${x(i)-bw/2}" y="${y0}" width="${bw}" height="${Math.max(0,h-1)}" rx="2" fill="${colors[k]}"><title>${fmtDay(d.date)} · ${ATT_ST[k]}: ${v}</title></rect>`;acc+=v}
+    if(i%every===0)g+=`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="10" fill="var(--muted)">${new Date(d.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'short'})}</text>`});
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Asistencia por sesión" style="width:100%;height:auto;display:block">${g}</svg>`;
+}
+$('#attFrom').addEventListener('change',e=>{A.from=e.target.value;attRenderReport()});
+$('#attTo').addEventListener('change',e=>{A.to=e.target.value;attRenderReport()});
+$('#attWhoSel').addEventListener('change',e=>{A.who=e.target.value;attRenderReport()});
+$('#attRepBody').addEventListener('click',e=>{const r=e.target.closest('.attpick');if(r){A.who=r.dataset.id;attRenderReport();window.scrollTo(0,$('#attReport').offsetTop-20)}});
+document.addEventListener('click',e=>{document.querySelectorAll('.catpick details[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
+async function pdfAtt(){
+  const sessions=attRangeSessions(),people=A.roster.filter(a=>inCats(a,A.repCats));
+  const period=`${fmtDay(A.from)} – ${fmtDay(A.to)}`;
+  if(A.who){
+    const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
+    const doc=await newPdf(`Asistencia · ${a.name}`,`${A.club} · ${a.cat} · ${period}`);
+    doc.autoTable({...tableStyle,startY:doc._startY,head:[['Asistencia','Días asistidos','Tarde','Justificadas','Ausencias','Racha actual']],body:[[st.pct==null?'—':st.pct+'%',st.P+st.T,st.T,st.J,st.A,st.streak]]});
+    const R=attRanking(a);
+    if(R&&R.length)doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ranking Liga Menor','Etapa','Puntos','Posición','Cambio vs etapa anterior']],
+      body:R.map(x=>{const m=rkMove(x);return [x.name+(x.own?' (su categoría)':''),ROMAN[x.d.stage]||x.d.stage,x.points+(x.dPts?` (${x.dPts>0?'+':''}${x.dPts})`:''),x.base?'—':`${x.rank} de ${x.n}`,x.base?m.t:m.t.replace('▲','Sube').replace('▼','Baja')+(x.prevRank!=null&&!x.base?` (antes ${x.prevRank})`:'')]})});
+    doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Fecha','Asistencia']],body:st.days.map(d=>[fmtDay(d.date),ATT_ST[d.st]])});
+    pdfFooters(doc);doc.save(pdfName(['asistencia',a.name,A.from,A.to]));return;
+  }
+  const rows=people.map(a=>({a,st:attStats(a,sessions)})).filter(x=>x.st.total).sort((x,y)=>(y.st.pct??-1)-(x.st.pct??-1));
+  const doc=await newPdf(`Asistencia · ${A.club}`,`${period} · ${sessions.length} sesiones · ${A.repCats&&A.repCats.size?[...A.repCats].join(', '):'Todas las categorías'}`);
+  doc.autoTable({...tableStyle,startY:doc._startY,head:[['Atleta','Categoría','Sesiones','Presente','Tarde','Justif.','Ausente','Asistencia','Ranking']],
+    body:rows.map(({a,st})=>{const R=attRanking(a),x=R&&R[0],m=x&&rkMove(x);return [a.name,a.cat,st.total,st.P,st.T,st.J,st.A,st.pct==null?'—':st.pct+'%',x?(x.base?'Sin resultados':`${x.rank} (${m.t.replace('▲','+').replace('▼','-')})`):'—']})});
+  pdfFooters(doc);doc.save(pdfName(['asistencia',A.club,A.from,A.to]));
+}
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===name)));
+  $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';$('#view-compare').hidden=name!=='compare';$('#view-clubs').hidden=name!=='clubs';$('#view-calc').hidden=name!=='calc';$('#view-att').hidden=name!=='att';
+  if(name==='att')attStart();
+  if(name==='calc'){buildCalcOptions();renderCalc()}
+  if(name==='clubs'){buildClubFilters();renderClubs()}
+  if(name==='player')renderPlayer();
+  if(name==='compare'){buildCompareOptions();renderCompare()}
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
+
+/* Data */
+fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
+  docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
+  if(j.ligaMayorDivisions)MAYOR_MIN={...MAYOR_MIN,...j.ligaMayorDivisions};
+  index();buildAgeIndex();buildGenderIndex();buildFilters();render();renderStages();buildAthletes();
+  const hm=/^#j(.+)$/.exec(location.hash);if(hm){showTab('player');selectPlayer(decodeURIComponent(hm[1]),false)}
+  if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
+}).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
+})();
+</script>
+</body>
+</html>
