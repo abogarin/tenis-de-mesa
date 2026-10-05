@@ -1,8 +1,6 @@
 // Firebase settings for the private "Asistencia" tab.
-// Paste the config object from Firebase console → Project settings → Your apps → Web app.
+// From Firebase console → Project settings → Your apps → Web app.
 // These values are not secret: access is controlled by the login and by firestore.rules.
-window.FIREBASE_CONFIG = null;
-/* Example:
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyC30UcfpmHHY8Y7odsqo4IgXS1TqNjoYRM",
   authDomain: "tm-curridabat.firebaseapp.com",
@@ -12,6 +10,4 @@ window.FIREBASE_CONFIG = {
   appId: "1:366016870017:web:25329ee6b8b59244cd3f80",
   measurementId: "G-JN78YTWD81"
 };
-
-*/
 window.ATTENDANCE_CLUB = 'Curridabat';
