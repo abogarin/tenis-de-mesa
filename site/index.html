@@ -293,6 +293,8 @@ footer.src a{color:inherit}
 .pielegend li{display:grid;grid-template-columns:auto 1fr auto;column-gap:8px;align-items:center;font-size:14px}
 .pielegend b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
 .pielegend small{grid-column:2/4;color:var(--muted);font-size:12px;margin-top:-4px}
+.catfix{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.catfix select{padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit}
 .rktbl{min-width:0;width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
 .rktbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line)}
 .rktbl th,.rktbl td{white-space:normal;position:static}
@@ -1382,6 +1384,8 @@ async function firebaseStore(cfg){
     setCancelled:(club,date,v,who)=>ref(club,date).set({club,date,cancelled:v,...stamp(who)},{merge:true}),
     athletes:async club=>(await db.collection('athletes').where('club','==',club).get()).docs.map(d=>({id:d.id,...d.data()})),
     addAthlete:(club,a,who)=>db.collection('athletes').add({...a,club,createdBy:who,createdAt:FV.serverTimestamp()}),
+    overrides:async club=>{const o={};(await db.collection('categories').where('club','==',club).get()).docs.forEach(d=>{const x=d.data();if(x.cat)o[x.athlete]=x.cat});return o},
+    setOverride:(club,athlete,cat,who)=>db.collection('categories').doc(slugify(club)+'__'+slugify(athlete)).set({club,athlete,cat:cat||null,...stamp(who)}),
   };
 }
 // Demo mode (?demo in the address): in-memory data only, never saved to Firebase; disappears on reload.
@@ -1403,7 +1407,7 @@ async function attSeedDemo(){
 }
 // In-memory stand-in used for testing the screens (demo mode)
 function mockStore(){
-  const S=new Map(),X=[];let cb=null;
+  const S=new Map(),X=[],O={};let cb=null;
   return {onAuth:f=>{cb=f;setTimeout(()=>f(null),0)},
     signIn:async(e,p)=>{if(p!=='prueba')throw {code:'auth/wrong-password'};cb({uid:'u1',email:e})},signOut:async()=>cb(null),reset:async()=>{},
     coach:async()=>({club:window.ATTENDANCE_CLUB||'Curridabat',name:'Entrenador de prueba'}),
@@ -1411,19 +1415,31 @@ function mockStore(){
     watch:()=>()=>{},
     setMarks:async(club,date,marks)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};for(const c in marks){if(marks[c]===null)delete s.marks[c];else s.marks[c]=marks[c]}S.set(k,s)},
     setCancelled:async(club,date,v)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};s.cancelled=v;S.set(k,s)},
-    athletes:async club=>X.filter(a=>a.club===club),addAthlete:async(club,a)=>{X.push({id:'m'+X.length,...a,club})}};
+    athletes:async club=>X.filter(a=>a.club===club),addAthlete:async(club,a)=>{X.push({id:'m'+X.length,...a,club})},
+    overrides:async()=>({...O}),setOverride:async(club,id,cat)=>{if(cat)O[id]=cat;else delete O[id]}};
 }
 // Roster: athletes whose most recent ranking row (current season) lists this club; category = age category
+// Category = youngest Liga Menor list where the athlete has results this season (FECOTEME also lists kids in
+// younger/older lists with only the starting points); if they have no results yet, the youngest list they're in.
+// A coach can override it (categories collection).
 function attCategory(carne,season){
-  for(const g of ['F','M']){const i=ageLow.get(season)?.get(carne+'|'+g);if(i!=null)return `${MENOR_ORDER[i]} ${g==='F'?'Fem':'Masc'}`}
-  return null;   // youth only: athletes not in any Liga Menor list are left out
+  let best=null,bestRes=null;
+  for(const d of docs){
+    if(d.season!==season||d.circuit!=='Liga Menor')continue;
+    const r=d._map.get(carne);if(!r)continue;const i=MENOR_ORDER.indexOf(d.division);if(i<0)continue;
+    const c={i,cat:`${d.division} ${d.gender==='F'?'Fem':'Masc'}`};
+    if(!best||i<best.i)best=c;
+    if((d._base==null||r[4]!==d._base)&&(!bestRes||i<bestRes.i))bestRes=c;
+  }
+  return (bestRes||best)?.cat||null;   // youth only: athletes not in any Liga Menor list are left out
 }
 function buildRoster(){
   const season=Math.max(...docs.map(d=>d.season)),club=fold(A.club),last=new Map();
   for(const d of docs.filter(x=>x.season===season).sort((a,b)=>a.stage-b.stage))for(const r of d.rows)last.set(r[1],r);
   const roster=[];
-  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const cat=attCategory(carne,season);if(cat)roster.push({id:carne,carne,name:titleCase(r[2]),cat})}
-  for(const x of A.extra.filter(x=>ATT_CATS.includes(x.cat)))roster.push({id:'x-'+x.id,carne:'',name:titleCase(x.name),cat:x.cat||'Otros',extra:true});
+  const ov=A.over||{};
+  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const auto=attCategory(carne,season);if(!auto)continue;const o=ATT_CATS.includes(ov[carne])?ov[carne]:null;roster.push({id:carne,carne,name:titleCase(r[2]),cat:o||auto,auto,manual:!!o})}
+  for(const x of A.extra){const id='x-'+x.id,o=ATT_CATS.includes(ov[id])?ov[id]:null,cat=o||x.cat;if(ATT_CATS.includes(cat))roster.push({id,carne:'',name:titleCase(x.name),cat,auto:x.cat,manual:!!o,extra:true})}
   roster.sort((a,b)=>ATT_CATS.indexOf(a.cat)-ATT_CATS.indexOf(b.cat)||a.name.localeCompare(b.name,'es'));
   A.roster=roster;
 }
@@ -1459,7 +1475,7 @@ async function attStart(){
     A.coach=coach;A.club=coach.club;
     $('#attLogin').hidden=true;$('#attApp').hidden=false;
     $('#attClub').textContent=A.club;$('#attWho').textContent='· '+(coach.name||user.email);
-    A.extra=await A.store.athletes(A.club).catch(()=>[]);buildRoster();
+    A.extra=await A.store.athletes(A.club).catch(()=>[]);A.over=await A.store.overrides(A.club).catch(()=>({}));buildRoster();
     if(ATT_DEMO&&!A.seeded){A.seeded=true;await attSeedDemo();$('#attDemo').hidden=false}
     await attReloadSessions();attOpenDate(A.date);attRender();
   });
@@ -1535,7 +1551,7 @@ function attRanking(a){
       prevRank:p?p[0]:null,prevStage:d._prev?`Etapa ${ROMAN[d._prev.stage]||d._prev.stage}${d._prev.season!==season?' '+d._prev.season:''}`:null,
       dPts:pp?r[4]-pp.v:null,order:MENOR_ORDER.indexOf(d.division)});
   }
-  out.sort((x,y)=>(x.base-y.base)||x.order-y.order);   // lists with results first (youngest first), then lists where they only have the starting score
+  out.sort((x,y)=>(x.base-y.base)||(y.own-x.own)||x.order-y.order);   // lists with results first (youngest first), then lists where they only have the starting score
   return out;
 }
 const rkMove=x=>x.base?{t:'Sin resultados',c:'eq'}:x.prevRank==null?(x.prevStage?{t:'Nuevo',c:'new'}:{t:'–',c:'eq'}):x.prevRank>x.rank?{t:'▲ '+(x.prevRank-x.rank),c:'up'}:x.prevRank<x.rank?{t:'▼ '+(x.rank-x.prevRank),c:'down'}:{t:'=',c:'eq'};
@@ -1598,7 +1614,8 @@ function attRenderReport(){
   if(!sessions.length){body.innerHTML=`<div class="pempty">No hay sesiones registradas entre el ${esc(fmtDay(A.from))} y el ${esc(fmtDay(A.to))}.</div>`;return}
   if(A.who){
     const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
-    body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0">${esc(a.name)} · ${esc(a.cat)} · ${esc(fmtDay(A.from))} – ${esc(fmtDay(A.to))}</span><button class="chip pdfbtn" data-pdf="att">Descargar PDF</button></div>
+    body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0">${esc(a.name)} · ${esc(fmtDay(A.from))} – ${esc(fmtDay(A.to))}</span>
+      <label class="catfix" title="La categoría se calcula con el ranking; cámbiela si está mal">Categoría <select id="attCatFix"><option value="">${esc(a.auto||a.cat)} (automática)</option>${ATT_CATS.filter(c=>c!==a.auto).map(c=>`<option${a.manual&&a.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select></label><button class="chip pdfbtn" data-pdf="att">Descargar PDF</button></div>
       <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
         <div class="card"><b>${st.pct==null?'—':st.pct+'%'}</b><span>Asistencia</span></div>
         <div class="card"><b>${st.P+st.T}</b><span>Días asistidos (${st.T} tarde)</span></div>
@@ -1633,6 +1650,11 @@ function attDrawChart(sessions,people){
     if(i%every===0)g+=`<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="10" fill="var(--muted)">${new Date(d.date+'T12:00:00').toLocaleDateString('es-CR',{day:'numeric',month:'short'})}</text>`});
   host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Asistencia por sesión" style="width:100%;height:auto;display:block">${g}</svg>`;
 }
+$('#attRepBody').addEventListener('change',async e=>{
+  if(e.target.id!=='attCatFix')return;const id=A.who,cat=e.target.value||null;
+  try{await A.store.setOverride(A.club,id,cat,A.user.email);A.over={...(A.over||{})};if(cat)A.over[id]=cat;else delete A.over[id];buildRoster();if(A.repCats&&A.repCats.size&&cat&&!A.repCats.has(cat))A.repCats.add(cat);attRenderReport()}
+  catch(err){console.error(err);alert('No se pudo guardar la categoría. Revise la conexión.')}
+});
 $('#attFrom').addEventListener('change',e=>{A.from=e.target.value;attRenderReport()});
 $('#attTo').addEventListener('change',e=>{A.to=e.target.value;attRenderReport()});
 function attWhoSugg(){
