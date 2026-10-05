@@ -608,7 +608,7 @@ def main():
             errors.append(f"{path.relative_to(ROOT)}: no ranking table found (needs Nombre and Puntos columns)")
             continue
         meta = metadata(path, wb, warnings)
-        file_matches = read_matches(wb) if len(tables) == 1 else None
+        file_matches = read_matches(wb)
         tables = combine_open_divisions(meta, tables)
         saved = []
         for sheet, rows in tables:
@@ -643,7 +643,13 @@ def main():
             d.update(sourceFile=path.name, rows=rows)
             sid = stage_id(d)
             if file_matches:
-                found_matches.setdefault(sid, {})[path.name] = file_matches
+                fm = file_matches
+                if len(tables) > 1:  # several divisions in one file (e.g. Liga Mayor): each match goes to its first player's division
+                    ids = {r[1] for r in rows}
+                    ms = [m for m in fm["m"] if m["a"][0] in ids]
+                    fm = {"pts": {c: p for c, p in fm["pts"].items() if c in ids}, "m": ms} if ms else None
+                if fm:
+                    found_matches.setdefault(sid, {})[path.name] = fm
             if sid in built and built[sid][1] != path.name:
                 prev = built[sid][1]
                 keep_prev = bool(re.search(r"REV|CORREC", fold(prev))) and not re.search(r"REV|CORREC", fold(path.name)) and not is_new
