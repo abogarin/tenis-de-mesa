@@ -29,6 +29,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Category corrections set by coaches: {club, athlete (carné or x-id), cat}; cat null = automatic again
+    match /categories/{id} {
+      allow read: if ownClub(resource.data);
+      allow create: if ownClub(request.resource.data);
+      allow update: if ownClub(resource.data) && request.resource.data.club == resource.data.club;
+      allow delete: if false;
+    }
+
     // Athletes added by hand (not yet in the national ranking)
     match /athletes/{id} {
       allow read: if ownClub(resource.data);

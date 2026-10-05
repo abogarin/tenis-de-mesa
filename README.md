@@ -86,6 +86,7 @@ Athletes are matched by **carné**, so their history carries over when they move
 Coaches log in and take training attendance for their club's athletes. The data is stored in Firebase (free tier), never in this repository.
 
 - **Roster:** athletes whose most recent 2026 ranking row lists the coach's club, grouped by age category (U9 Fem, U13 Masc, …, Open Fem, Mayor, Master, PTT). Athletes not in any ranking yet can be added with **+ Agregar atleta**.
+- **Category:** the youngest Liga Menor ranking where the athlete has results this season (FECOTEME also lists kids, with only the starting points, in categories they don't play). If it's wrong, open the athlete in **Reporte** and change **Categoría**; the correction is saved in the `categories` collection and applies for every coach.
 - **Pasar lista:** choose the date and one or more categories, then tap Presente / Ausente / Justificado / Tarde. Every tap saves immediately. **Sesión cancelada** excludes that day from the percentages.
 - **Reporte:** choose a period, categories and optionally one athlete. Attendance % = (present + late) ÷ (present + late + absent); justified absences don't count.
 
