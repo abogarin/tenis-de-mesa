@@ -1744,10 +1744,13 @@ function mtLoad(){
   return MT.loading;
 }
 const mtM=d=>MT.data?.[d.id]?.m||[];
-const mtDocs=()=>docs.filter(d=>mtM(d).length);
-function mtStages(){return mtDocs().filter(d=>String(d.season)===String(MT.season)&&(!MT.circuit||d.circuit===MT.circuit)&&(!MT.div||d.division===MT.div)&&(!MT.gender||d.gender===MT.gender))}
+const MT_CIRCUITS=['Liga Menor','Liga Mayor','Open Femenino'];   // PTT and Master are left out
+const mtAll=()=>docs.filter(d=>MT_CIRCUITS.includes(d.circuit));
+const mtDocs=()=>mtAll().filter(d=>mtM(d).length);
+const mtSel=d=>String(d.season)===String(MT.season)&&(!MT.circuit||d.circuit===MT.circuit)&&(!MT.div||d.division===MT.div)&&(!MT.gender||d.gender===MT.gender||d.gender==='X');
+function mtStages(){return mtDocs().filter(mtSel)}
 function mtFilters(){
-  const all=mtDocs();
+  const all=mtAll();
   MT.season=fillSelect($('#mseason'),[...new Set(all.map(d=>d.season))].sort((a,b)=>b-a),MT.season,'');
   const s=all.filter(d=>String(d.season)===String(MT.season));
   MT.circuit=fillSelect($('#mcircuit'),[...new Set(s.map(d=>d.circuit))].sort((a,b)=>circRank(a)-circRank(b)),MT.circuit,'Todos');
@@ -1836,7 +1839,7 @@ function mtRender(){
   const st=mtStages();
   const avail=`<p class="note" style="margin-top:10px">Partidos disponibles: ${mtDocs().filter(d=>String(d.season)===String(MT.season)).sort((a,b)=>a.stage-b.stage||seriesOrder(a)-seriesOrder(b)).map(d=>`${esc(seriesName(d))} · Etapa ${ROMAN[d.stage]||d.stage}`).join(' · ')||'ninguno en esta temporada'}. FECOTEME solo los incluye en algunos archivos.</p>`;
   const pl=MT.who&&mtPlayers().find(a=>a.carne===MT.who);
-  if(!pl){if(MT.who)$('#mq').value='';MT.who='';body.innerHTML=`<div class="pempty">${st.length?'Escriba el nombre de un jugador para ver sus partidos.':'No hay partidos con estos filtros.'}</div>${avail}`;return}
+  if(!pl){if(MT.who)$('#mq').value='';MT.who='';body.innerHTML=`<div class="pempty">${st.length?'Escriba el nombre de un jugador para ver sus partidos.':`FECOTEME todavía no ha publicado partidos para ${esc([MT.circuit||'estos filtros',MT.div,MT.gender&&GENDER[MT.gender]].filter(Boolean).join(' · '))} en ${esc(MT.season)}: sus archivos solo traen el ranking final. Aparecerán aquí en cuanto publique un archivo con las hojas de grupos y la llave.`}</div>${avail}`;return}
   $('#mq').value=pl.name;
   const S=mtPlayerStages(MT.who),L=S.flatMap(s=>s.rows.filter(r=>!r.bye)),W=L.filter(x=>x.won).length,sw=L.reduce((s,x)=>s+x.sw,0),sl=L.reduce((s,x)=>s+x.sl,0),T=S.reduce((s,x)=>s+x.total,0);
   let h=`<div class="pctl"><span class="summary" style="margin-left:0"><b>${esc(pl.name)}</b> · ${esc(pl.club)} · carné ${esc(pl.carne)}</span><button class="chip" data-mtplayer="${esc(pl.carne)}">Ver en Jugador</button><button class="chip pdfbtn" data-pdf="matches">Descargar PDF</button></div>
