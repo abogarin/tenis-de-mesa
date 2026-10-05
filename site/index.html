@@ -1621,12 +1621,13 @@ function attPieCard(st){
 }
 function attRankCell(a){const R=attRanking(a);if(!R||!R.length)return '<span class="club">—</span>';const x=R[0],m=rkMove(x);if(x.base)return '<span class="club" title="Tiene el puntaje inicial: aún sin resultados en el ranking">Sin resultados</span>';return `#${x.rank}${x.own?'':` <small class="club" title="Ranking ${esc(x.name)}">${esc(x.d.division)}</small>`} <span class="mv ${m.c}">${m.t}</span>`}
 const pctChip=p=>p==null?'—':`<span class="pctchip ${p<70?'lo':p>=90?'hi':''}">${p}%</span>`;
+// Inactive athletes appear in reports only with "Mostrar atletas inactivos" ticked (or while one is open)
+const attReportPeople=()=>A.roster.filter(a=>inCats(a,A.repCats)&&(!a.inactive||A.showInactive||a.id===A.who));
 function attRenderReport(){
   if(!A.to)A.to=isoDay(new Date());if(!A.from)A.from=addDays(A.to,-30);
   $('#attFrom').value=A.from;$('#attTo').value=A.to;
   renderCatPick($('#catpickRep'),A.repCats,s=>{A.repCats=s;attSaveCats();A.who='';attRenderReport()});
-  const rs=attRangeSessions(),hasRec=a=>rs.some(s=>s.marks?.[a.id]);
-  const people=A.roster.filter(a=>inCats(a,A.repCats)&&(!a.inactive||A.showInactive||hasRec(a)||a.id===A.who));
+  const people=attReportPeople();
   if(A.who&&!people.some(a=>a.id===A.who))A.who='';
   A.people=people;$('#attWhoQ').value=A.who?(people.find(a=>a.id===A.who)?.name||''):'';
   const sessions=attRangeSessions(),body=$('#attRepBody');
@@ -1676,7 +1677,7 @@ $('#attRepBody').addEventListener('change',async e=>{
   if(e.target.id==='attCatFix'){const cat=e.target.value||null;if(await attSetSetting(id,{cat})){if(A.repCats&&A.repCats.size&&cat&&!A.repCats.has(cat))A.repCats.add(cat);attRenderReport()}}
   if(e.target.id==='attActFix'){const inactive=e.target.value==='inactive';if(await attSetSetting(id,inactive?{inactive:true}:{inactive:false,reviewed:true}))attRenderReport()}
 });
-$('#attShowInact').addEventListener('change',e=>{A.showInactive=e.target.checked;attRenderReport()});
+$('#attShowInact').addEventListener('change',e=>{A.showInactive=e.target.checked;if(!A.showInactive&&A.roster.find(a=>a.id===A.who)?.inactive)A.who='';attRenderReport()});
 $('#attFrom').addEventListener('change',e=>{A.from=e.target.value;attRenderReport()});
 $('#attTo').addEventListener('change',e=>{A.to=e.target.value;attRenderReport()});
 function attWhoSugg(){
@@ -1692,7 +1693,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.attwho'))$('#attWho
 $('#attRepBody').addEventListener('click',e=>{const r=e.target.closest('.attpick');if(r){A.who=r.dataset.id;attRenderReport();window.scrollTo(0,$('#attReport').offsetTop-20)}});
 document.addEventListener('click',e=>{document.querySelectorAll('.catpick details[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
 async function pdfAtt(){
-  const sessions=attRangeSessions(),people=A.roster.filter(a=>inCats(a,A.repCats));
+  const sessions=attRangeSessions(),people=attReportPeople();
   const period=`${fmtDay(A.from)} – ${fmtDay(A.to)}`;
   if(A.who){
     const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
