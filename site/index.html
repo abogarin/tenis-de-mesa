@@ -1551,17 +1551,16 @@ function attRanking(a){
       prevRank:p?p[0]:null,prevStage:d._prev?`Etapa ${ROMAN[d._prev.stage]||d._prev.stage}${d._prev.season!==season?' '+d._prev.season:''}`:null,
       dPts:pp?r[4]-pp.v:null,order:MENOR_ORDER.indexOf(d.division)});
   }
-  out.sort((x,y)=>(x.base-y.base)||(y.own-x.own)||x.order-y.order);   // lists with results first (youngest first), then lists where they only have the starting score
-  return out;
+  return out.filter(x=>x.own);   // only the athlete's own category, not the older lists they also play
 }
 const rkMove=x=>x.base?{t:'Sin resultados',c:'eq'}:x.prevRank==null?(x.prevStage?{t:'Nuevo',c:'new'}:{t:'–',c:'eq'}):x.prevRank>x.rank?{t:'▲ '+(x.prevRank-x.rank),c:'up'}:x.prevRank<x.rank?{t:'▼ '+(x.rank-x.prevRank),c:'down'}:{t:'=',c:'eq'};
 function attRankingCard(a){
   const R=attRanking(a);if(R==null)return '';
   const season=Math.max(...docs.map(d=>d.season));
-  if(!R.length)return `<div class="pcard"><h3 class="atth3">Ranking Liga Menor ${season}</h3><p class="pct">No aparece en los rankings de Liga Menor publicados este año.</p></div>`;
+  if(!R.length)return `<div class="pcard"><h3 class="atth3">Ranking Liga Menor ${season}</h3><p class="pct">No aparece en el ranking ${esc(a.cat)} publicado este año.</p></div>`;
   const main=R[0],mv=rkMove(main);
   return `<div class="pcard"><h3 class="atth3">Ranking Liga Menor ${season}</h3>
-    <p class="pct" style="margin:0 0 8px">${esc(main.name)} · Etapa ${ROMAN[main.d.stage]||main.d.stage}${main.own?' · su categoría':''}</p>
+    <p class="pct" style="margin:0 0 8px">${esc(main.name)} · Etapa ${ROMAN[main.d.stage]||main.d.stage}</p>
     <div class="cards rkcards"><div class="card"><b>${main.points}</b><span>Puntos${main.dPts?` <em class="mv ${main.dPts>0?'up':'down'}">${main.dPts>0?'+':''}${main.dPts}</em>`:''}</span></div>
       <div class="card"><b>${main.base?'—':'#'+main.rank}</b><span>${main.base?'Sin posición':'Posición de '+main.n}</span></div>
       <div class="card"><b>${main.base?'—':`<span class="mv ${mv.c}">${mv.t}</span>`}</b><span>${main.base?'Aún sin resultados':main.prevRank!=null?`Antes #${main.prevRank} (${esc(main.prevStage)})`:main.prevStage?`No estaba en ${esc(main.prevStage)}`:'Primera etapa'}</span></div></div>
