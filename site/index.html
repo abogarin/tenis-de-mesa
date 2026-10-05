@@ -252,6 +252,8 @@ footer.src a{color:inherit}
 .catpick summary::after{content:"▾";float:right;color:var(--muted)}
 .catlist{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:12;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:2px;max-height:320px;overflow:auto}
 .catlist label{display:flex;gap:8px;align-items:center;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:14px;text-transform:none;letter-spacing:0;color:var(--text);font-weight:500;margin:0}
+.attdemo{background:#FFF4D6;color:#5C4300;border:1px solid #E8C766;border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.catlist input{width:auto;padding:0;margin:0;flex:none;border:0;accent-color:var(--ball)}
 .catlist label:hover{background:var(--surface-2)}
 .catlist .catall{grid-column:1/-1;border-bottom:1px solid var(--line);border-radius:0;font-weight:700}
 .attgrp{font-family:var(--display);font-size:18px;font-weight:600;margin:14px 0 6px}
@@ -411,6 +413,7 @@ footer.src a{color:inherit}
       <p>Esta sección todavía no está conectada a Firebase. Complete el archivo <code>site/firebase-config.js</code> siguiendo las instrucciones del README.</p>
     </div>
     <div id="attApp" hidden>
+      <div id="attDemo" class="attdemo" hidden><b>Modo de prueba.</b> Datos inventados, solo en este navegador: no se guardan en Firebase y desaparecen al recargar la página. Para el modo real, quite <code>?demo</code> de la dirección.</div>
       <div class="atthead"><div><b id="attClub"></b> <span class="club" id="attWho"></span></div>
         <div class="pctl" style="margin:0"><button class="chip" data-attview="roll" aria-pressed="true">Pasar lista</button><button class="chip" data-attview="report" aria-pressed="false">Reporte</button><button class="chip" id="attLogout">Salir</button></div></div>
       <div id="attRoll">
@@ -1348,7 +1351,7 @@ async function pdfCalc(){
 }
 /* ---------- Asistencia a entrenamientos (privado, Firebase) ---------- */
 const ATT_ST={P:'Presente',A:'Ausente',J:'Justificado',T:'Tarde'};
-const ATT_CATS=['U9 Fem','U9 Masc','U11 Fem','U11 Masc','U13 Fem','U13 Masc','U15 Fem','U15 Masc','U19 Fem','U19 Masc','Open Fem','Mayor','Master','PTT','Otros'];
+const ATT_CATS=['U9 Fem','U9 Masc','U11 Fem','U11 Masc','U13 Fem','U13 Masc','U15 Fem','U15 Masc','U19 Fem','U19 Masc','Open Fem','Master','PTT','Otros'];
 const isoDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return isoDay(d)};
 const fmtDay=iso=>new Date(iso+'T12:00:00').toLocaleDateString('es-CR',{weekday:'short',day:'numeric',month:'short'});
@@ -1373,7 +1376,24 @@ async function firebaseStore(cfg){
     addAthlete:(club,a,who)=>db.collection('athletes').add({...a,club,createdBy:who,createdAt:FV.serverTimestamp()}),
   };
 }
-// In-memory stand-in used only for testing the screens (window.ATT_MOCK = true)
+// Demo mode (?demo in the address): in-memory data only, never saved to Firebase; disappears on reload.
+const ATT_DEMO=!!window.ATT_MOCK||/[?&]demo\b/.test(location.search);
+async function attSeedDemo(){
+  // ~8 weeks of Tue/Thu sessions with a different attendance habit per athlete
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const habit=new Map(A.roster.map(a=>[a.id,0.45+rnd()*0.5]));
+  const end=isoDay(new Date());let day=addDays(end,-56),n=0;
+  while(day<end){
+    const wd=new Date(day+'T12:00:00').getDay();
+    if(wd===2||wd===4){
+      n++;
+      if(n===6){await A.store.setCancelled(A.club,day,true,'demo')}
+      else{const m={};for(const a of A.roster){const h=habit.get(a.id),x=rnd();m[a.id]=x<h?(rnd()<0.12?'T':'P'):(rnd()<0.3?'J':'A')}await A.store.setMarks(A.club,day,m,'demo')}
+    }
+    day=addDays(day,1);
+  }
+}
+// In-memory stand-in used for testing the screens (demo mode)
 function mockStore(){
   const S=new Map(),X=[];let cb=null;
   return {onAuth:f=>{cb=f;setTimeout(()=>f(null),0)},
@@ -1389,13 +1409,13 @@ function mockStore(){
 function attCategory(carne,season){
   for(const g of ['F','M']){const i=ageLow.get(season)?.get(carne+'|'+g);if(i!=null)return `${MENOR_ORDER[i]} ${g==='F'?'Fem':'Masc'}`}
   const inC=c=>docs.some(d=>d.season===season&&d.circuit===c&&d._map.has(carne));
-  return inC('Open Femenino')?'Open Fem':inC('Liga Mayor')?'Mayor':inC('Master')?'Master':inC('PTT')?'PTT':'Otros';
+  return inC('Open Femenino')?'Open Fem':inC('Master')?'Master':inC('PTT')?'PTT':inC('Liga Mayor')?null:'Otros';
 }
 function buildRoster(){
   const season=Math.max(...docs.map(d=>d.season)),club=fold(A.club),last=new Map();
   for(const d of docs.filter(x=>x.season===season).sort((a,b)=>a.stage-b.stage))for(const r of d.rows)last.set(r[1],r);
   const roster=[];
-  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club))roster.push({id:carne,carne,name:titleCase(r[2]),cat:attCategory(carne,season)});
+  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const cat=attCategory(carne,season);if(cat)roster.push({id:carne,carne,name:titleCase(r[2]),cat})}
   for(const x of A.extra)roster.push({id:'x-'+x.id,carne:'',name:titleCase(x.name),cat:x.cat||'Otros',extra:true});
   roster.sort((a,b)=>ATT_CATS.indexOf(a.cat)-ATT_CATS.indexOf(b.cat)||a.name.localeCompare(b.name,'es'));
   A.roster=roster;
@@ -1420,9 +1440,10 @@ function attLoadCats(){try{const v=JSON.parse(localStorage.getItem('att-cats')||
 async function attStart(){
   if(A.started)return;A.started=true;
   const cfg=window.FIREBASE_CONFIG;A.club=window.ATTENDANCE_CLUB||'Curridabat';
-  if(!window.ATT_MOCK&&(!cfg||!cfg.apiKey)){$('#attSetup').hidden=false;return}
-  try{A.store=window.ATT_MOCK?mockStore():await firebaseStore(cfg)}catch(e){console.error(e);$('#attSetup').hidden=false;$('#attSetup p').textContent='No se pudo cargar Firebase. Revise la conexión a internet y recargue la página.';return}
+  if(!ATT_DEMO&&(!cfg||!cfg.apiKey)){$('#attSetup').hidden=false;return}
+  try{A.store=ATT_DEMO?mockStore():await firebaseStore(cfg)}catch(e){console.error(e);$('#attSetup').hidden=false;$('#attSetup p').textContent='No se pudo cargar Firebase. Revise la conexión a internet y recargue la página.';return}
   attLoadCats();
+  if(ATT_DEMO){$('#attLoginMsg').className='msg ok';$('#attLoginMsg').textContent='Modo de prueba: use cualquier correo y la contraseña «prueba». Nada se guarda en Firebase.'}
   A.store.onAuth(async user=>{
     A.user=user;if(A.unwatch){A.unwatch();A.unwatch=null}
     if(!user){$('#attApp').hidden=true;$('#attLogin').hidden=false;return}
@@ -1432,6 +1453,7 @@ async function attStart(){
     $('#attLogin').hidden=true;$('#attApp').hidden=false;
     $('#attClub').textContent=A.club;$('#attWho').textContent='· '+(coach.name||user.email);
     A.extra=await A.store.athletes(A.club).catch(()=>[]);buildRoster();
+    if(ATT_DEMO&&!A.seeded){A.seeded=true;await attSeedDemo();$('#attDemo').hidden=false}
     await attReloadSessions();attOpenDate(A.date);attRender();
   });
 }
@@ -1623,6 +1645,7 @@ fetch('data/ranking.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error(
   docs=(j.stages||[]).map(d=>({...d,season:+d.season,stage:+d.stage,gender:d.gender||'X',rows:(d.rows||[]).map(r=>[+r[0],String(r[1]),String(r[2]),String(r[3]??''),+r[4],r[5]||''])}));
   if(j.ligaMayorDivisions)MAYOR_MIN={...MAYOR_MIN,...j.ligaMayorDivisions};
   index();buildAgeIndex();buildGenderIndex();buildFilters();render();renderStages();buildAthletes();
+  if(ATT_DEMO&&/[?&]demo\b/.test(location.search))showTab('att');
   const hm=/^#j(.+)$/.exec(location.hash);if(hm){showTab('player');selectPlayer(decodeURIComponent(hm[1]),false)}
   if(j.generatedAt)$('#updated').textContent='Actualizado el '+new Date(j.generatedAt).toLocaleDateString('es-CR',{day:'numeric',month:'long',year:'numeric'})+'.';
 }).catch(()=>{$('#tbody').innerHTML='<tr><td colspan="7" class="empty">No se pudieron cargar los datos del ranking. Recargue la página.</td></tr>'});
