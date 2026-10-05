@@ -195,8 +195,9 @@ def read_tables(wb):
 
 # ---------- matches (group and knockout sheets) ----------
 
-ROUND_NAMES = {"1/32": "Ronda de 64", "1/16": "Ronda de 32", "1/8": "Octavos", "QF": "Cuartos", "1/4": "Cuartos",
-               "SF": "Semifinal", "1/2": "Semifinal", "F": "Final", "3Y4": "3.er lugar"}
+ROUND_NAMES = {"1/32": "Ronda de 64", "1/16": "Ronda de 32", "1/8": "Octavos", "OCTAVOS": "Octavos", "QF": "Cuartos", "1/4": "Cuartos",
+               "CUARTOS": "Cuartos", "SF": "Semifinal", "1/2": "Semifinal", "SEMIFINAL": "Semifinal", "SEMIFINALES": "Semifinal",
+               "F": "Final", "FINAL": "Final", "3Y4": "3.er lugar", "3ERLUGAR": "3.er lugar", "TERCERLUGAR": "3.er lugar"}
 
 
 def _num(v):
@@ -242,6 +243,9 @@ def _right(row, j):
     return None
 
 
+ENTRY_POINTS = {}  # carné -> points at the start of the stage, filled while reading group sheets
+
+
 def group_matches(ws):
     g = _grid(ws)
     hdr = next((i for i, r in enumerate(g) if {"ORDEN", "CARNE", "JUGADORES"} <= {fold(v).strip() for v in r if isinstance(v, str)}), None)
@@ -255,6 +259,11 @@ def group_matches(ws):
         if o is None:
             break
         players[o] = [_carne(r[cols["CARNE"]]), str(r[cols["JUGADORES"]] or "").strip(), str(r[cols.get("LUGAR", cols["JUGADORES"] + 1)] or "").strip()]
+        # points when the stage started: the "Ranking"/"Puntos" columns hold position and points (their labels are swapped in some files)
+        nums = [_num(r[cols[k]]) for k in ("RANKING", "PUNTOS") if k in cols and cols[k] < len(r)]
+        nums = [n for n in nums if n is not None]
+        if nums and max(nums) >= 100:
+            ENTRY_POINTS[players[o][0]] = max(nums)
     gp = _find(g, lambda t: t.startswith("GRUPO N"))
     group = _num(_right(g[gp[0]], gp[1])) if gp else _num(re.sub(r"\D", "", ws.title) or None)
     fp = _find(g, lambda t: t.startswith("FECHA"))
@@ -305,7 +314,15 @@ def knockout_matches(ws):
             continue
         ca, cb = _carne(r[c["A"]]), _carne(r[c["B"]])
         na, nb = str(r[c["PLA 1"]] or "").strip(), str(r[c["PLA 2"]] or "").strip()
-        if not ca or not cb or "BYE" in (fold(na), fold(nb)):
+        rnd = re.sub(r"\s+", "", fold(str(r[c["ROUND"]] or "")))
+        rname = ROUND_NAMES.get(rnd, str(r[c["ROUND"]] or "").strip())
+        bye_a, bye_b = (not ca or fold(na) == "BYE"), (not cb or fold(nb) == "BYE")
+        if bye_a != bye_b:  # one real player against a BYE: record that the player passed the round
+            p = [cb, nb, str(r[ass[-1]] or "").strip()] if bye_a else [ca, na, str(r[ass[0]] or "").strip()]
+            if p[0]:
+                out.append({"r": rname, "g": None, "d": None, "a": p, "b": None, "s": [], "w": 0, "bye": True})
+            continue
+        if bye_a or bye_b:
             continue
         sets = _sets([r[j] for j in set_cols])
         if not sets:
@@ -313,8 +330,7 @@ def knockout_matches(ws):
         a_won, b_won = _num(r[ga]), _num(r[gx])
         win = (0 if a_won > b_won else 1) if a_won is not None and b_won is not None and a_won != b_won \
             else (0 if sum(x > y for x, y in sets) * 2 > len(sets) else 1)
-        rnd = re.sub(r"\s+", "", fold(str(r[c["ROUND"]] or "")))
-        out.append({"r": ROUND_NAMES.get(rnd, str(r[c["ROUND"]] or "").strip()), "g": None, "d": None,
+        out.append({"r": rname, "g": None, "d": None,
                     "a": [ca, na, str(r[ass[0]] or "").strip()], "b": [cb, nb, str(r[ass[-1]] or "").strip()], "s": sets, "w": win})
     return out
 
@@ -322,6 +338,7 @@ def knockout_matches(ws):
 def read_matches(wb):
     """Individual matches from 'Grupo N' and 'LLAVE ..' sheets, in playing order (groups first)."""
     groups, ko = [], []
+    ENTRY_POINTS.clear()
     for ws in wb.worksheets:
         t = fold(ws.title).strip()
         try:
@@ -334,7 +351,8 @@ def read_matches(wb):
     date = next((m["d"] for m in groups if m["d"]), None)
     for m in ko:
         m["d"] = date
-    return groups + ko
+    ms = groups + ko
+    return {"pts": dict(ENTRY_POINTS), "m": ms} if ms else None
 
 
 # ---------- metadata ----------
@@ -590,7 +608,7 @@ def main():
             errors.append(f"{path.relative_to(ROOT)}: no ranking table found (needs Nombre and Puntos columns)")
             continue
         meta = metadata(path, wb, warnings)
-        file_matches = read_matches(wb) if len(tables) == 1 else []
+        file_matches = read_matches(wb) if len(tables) == 1 else None
         tables = combine_open_divisions(meta, tables)
         saved = []
         for sheet, rows in tables:
@@ -685,7 +703,7 @@ def main():
         if sid in built:
             matches[sid] = by_file.get(built[sid][1]) or next(iter(by_file.values()))
     MATCHES_OUT.write_text(json.dumps(matches, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"Wrote {MATCHES_OUT.relative_to(ROOT)} with {sum(map(len, matches.values()))} matches from {len(matches)} stages")
+    print(f"Wrote {MATCHES_OUT.relative_to(ROOT)} with {sum(len(v['m']) for v in matches.values())} matches from {len(matches)} stages")
 
     WARN_FILE.write_text(json.dumps({"warnings": warnings}, ensure_ascii=False, indent=1), encoding="utf-8")
     for w in warnings:
