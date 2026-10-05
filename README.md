@@ -59,6 +59,8 @@ Valid values:
 ## Partidos (individual matches)
 Some FECOTEME workbooks include the tournament itself: one "Grupo N" sheet per group and a "LLAVE" sheet with the knockout draw (in 2026, the stage IV youth files). The converter reads every match from those sheets into `site/data/matches.json`, including from a second copy of a stage that was otherwise skipped as a duplicate. The **Partidos** tab shows them per player, filtered by season, circuit, category and gender. Stages whose files only have the final ranking have no matches to show.
 
+Each match shows the points won or lost, using FECOTEME's table (the same as the Calculadora) and the points both players had when the stage started (from the group sheets). BYE +10; champion +20, runner-up +15, semifinal losers +10, quarterfinal losers +5. FECOTEME doesn't apply this the same way in every stage: in some, group matches count; in others only the knockout counts and players who don't reach it lose 20. For each stage the page uses whichever reproduces the official ranking for more players, and each stage total is compared with the official change.
+
 ## Athletes across years
 Athletes are matched by **carné**, so their history carries over when they move from U11 to U13, or between circuits. Rankings from different categories have different sizes, so progress charts use the **percentile** (e.g. "Top 5%") rather than the raw position. Files without a carné column fall back to matching by name.
 
