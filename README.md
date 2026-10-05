@@ -56,6 +56,9 @@ Valid values:
 
 **Re-uploading** the same season, circuit, category, gender and stage replaces the earlier version. **Removing** a stage means deleting its workbook from `archive/<year>/`. Every run rebuilds all rankings from the workbooks in `archive/`, so fixes to the converter also apply to older files.
 
+## Partidos (individual matches)
+Some FECOTEME workbooks include the tournament itself: one "Grupo N" sheet per group and a "LLAVE" sheet with the knockout draw (in 2026, the stage IV youth files). The converter reads every match from those sheets into `site/data/matches.json`, including from a second copy of a stage that was otherwise skipped as a duplicate. The **Partidos** tab shows them per player, filtered by season, circuit, category and gender. Stages whose files only have the final ranking have no matches to show.
+
 ## Athletes across years
 Athletes are matched by **carné**, so their history carries over when they move from U11 to U13, or between circuits. Rankings from different categories have different sizes, so progress charts use the **percentile** (e.g. "Top 5%") rather than the raw position. Files without a carné column fall back to matching by name.
 
