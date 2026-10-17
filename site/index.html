@@ -1990,20 +1990,12 @@ function ctlStandings(d,n){
     const m=ms[mKey(P[i].id,P[j].id)];if(m&&m.skip){S.get(P[i].id).skip++;S.get(P[j].id).skip++;continue}
     for(const [x,y] of [[P[i].id,P[j].id],[P[j].id,P[i].id]]){const r=mRes(m,x);if(!r)continue;const s=S.get(x);s.pj++;r.win?(s.pg++,s.pts+=2):s.pp++;s.sf+=r.sa;s.sc+=r.sb;s.pf+=r.pa;s.pc+=r.pb}
   }
-  const L=[...S.values()],complete=L.every(s=>s.pj+s.skip===P.length-1);
+  const L=[...S.values()];
   for(const s of L){const possible=2*(P.length-1-s.skip);s.pct=possible>0?25*s.pts/possible:0}
-  // ties: head-to-head among the tied players, then set difference, then point difference among them
-  const mini=(grp)=>{const ids=new Set(grp.map(s=>s.p.id)),M=new Map(grp.map(s=>[s.p.id,{w:0,sd:0,pd:0}]));
-    for(const a of ids)for(const b of ids){if(a>=b)continue;const m=ms[mKey(a,b)];for(const [x,y] of [[a,b],[b,a]]){const r=mRes(m,x);if(!r)continue;const t=M.get(x);if(r.win)t.w++;t.sd+=r.sa-r.sb;t.pd+=r.pa-r.pb}}
-    return M};
-  L.sort((x,y)=>y.pts-x.pts);
-  const out=[];
-  for(let i=0;i<L.length;){let j=i;while(j<L.length&&L[j].pts===L[i].pts)j++;const g=L.slice(i,j);
-    if(g.length>1){const M=mini(g);g.forEach(s=>s.tb=M.get(s.p.id));g.sort((x,y)=>y.tb.w-x.tb.w||y.tb.sd-x.tb.sd||y.tb.pd-x.tb.pd||x.p.name.localeCompare(y.p.name,'es'));
-      if(complete)for(let k=1;k<g.length;k++){const a=g[k-1].tb,b=g[k].tb;if(a.w===b.w&&a.sd===b.sd&&a.pd===b.pd){g[k].tied=g[k-1].tied=true}}}
-    out.push(...g);i=j}
-  out.forEach((s,k)=>s.pos=k+1);
-  return out;
+  // each control is ordered by points only (equal points share the position); ties are broken only in the final result
+  L.sort((x,y)=>y.pts-x.pts||x.p.name.localeCompare(y.p.name,'es'));
+  L.forEach(s=>s.pos=1+L.filter(t=>t.pts>s.pts).length);
+  return L;
 }
 function ctlAttendance(p){
   const ss=[...A.sessions.values()].filter(s=>!s.cancelled&&s.date>=JDN.attFrom&&s.date<=JDN.attTo);
@@ -2018,8 +2010,26 @@ function ctlSummary(d){
     const cs=st.map(m=>m.get(p.id)),cpct=cs.reduce((t,s)=>t+(s?.pct||0),0),att=ctlAttendance(p),fis=d.physical?.[p.id];
     const fpct=fis!=null&&fis!==''?15*Math.max(0,Math.min(100,+fis))/100:null;
     return {p,cs,cpct,att,fis,fpct,total:cpct+(att?.pct||0)+(fpct||0)};
-  }).sort((x,y)=>y.total-x.total);
-  rows.forEach((r,i)=>r.pos=i+1);return rows;
+  });
+  // Ties in the final total, using the matches of all 3 controls among the tied players:
+  // head-to-head, then set difference, then point difference. Still tied (after the last control) -> tiebreak match.
+  const key=r=>Math.round(r.total*100);
+  const all=JDN.controls.map(c=>d.controls?.[c.n]?.matches||{});
+  const done=JDN.controls.every((c,i)=>d.players.every((p,a)=>d.players.every((q,b)=>b<=a||all[i][mKey(p.id,q.id)])));
+  rows.sort((x,y)=>key(y)-key(x));
+  const out=[];
+  for(let i=0;i<rows.length;){let j=i;while(j<rows.length&&key(rows[j])===key(rows[i]))j++;const g=rows.slice(i,j);
+    if(g.length>1){
+      const M=new Map(g.map(r=>[r.p.id,{w:0,sd:0,pd:0}])),ids=g.map(r=>r.p.id);
+      for(const ms of all)for(const a of ids)for(const b of ids){if(a>=b)continue;const m=ms[mKey(a,b)];for(const x of [a,b]){const r=mRes(m,x);if(!r)continue;const t=M.get(x);if(r.win)t.w++;t.sd+=r.sa-r.sb;t.pd+=r.pa-r.pb}}
+      g.forEach(r=>r.tb=M.get(r.p.id));
+      g.sort((x,y)=>y.tb.w-x.tb.w||y.tb.sd-x.tb.sd||y.tb.pd-x.tb.pd||x.p.name.localeCompare(y.p.name,'es'));
+      for(let k=1;k<g.length;k++){const a=g[k-1].tb,b=g[k].tb;if(a.w===b.w&&a.sd===b.sd&&a.pd===b.pd){g[k].tied=g[k-1].tied=true}}
+      g.forEach(r=>r.tieNote=`Empatado en ${f1(r.total)} %: ${r.tb.w} victoria(s) entre los empatados, sets ${r.tb.sd>=0?'+':''}${r.tb.sd}, tantos ${r.tb.pd>=0?'+':''}${r.tb.pd}`);
+    }
+    out.push(...g);i=j}
+  out.forEach((r,i)=>{r.pos=i+1;r.final=done});
+  return out;
 }
 function ctlRender(){
   const box=$('#attCtl'),cat=ctlCat(),d=KC.data[KC.cat];
@@ -2048,8 +2058,8 @@ function ctlControlHtml(d,n){
   const st=ctlStandings(d,n);
   let h=`<div class="pcard"><h3 class="atth3">Clasificación · Control ${n}</h3><p class="pct" style="margin:0 0 6px">${done} de ${total} partidos registrados. Partido ganado = 2 puntos; % del control = puntos ÷ puntos posibles × 25 %.</p>
     <div class="tblwrap ptable" style="margin-top:6px"><table><thead><tr><th class="num">Pos.</th><th>Jugador</th><th class="num">PJ</th><th class="num">PG</th><th class="num">PP</th><th class="num">Sets</th><th class="num">Tantos</th><th class="num">Puntos</th><th class="num">% (de 25)</th></tr></thead><tbody>
-    ${st.map(s=>`<tr><td class="num">${s.pos}${s.tied?' <span title="Empate sin resolver: valorar partido de desempate">*</span>':''}</td><td class="name">${esc(s.p.name)}</td><td class="num">${s.pj}</td><td class="num">${s.pg}</td><td class="num">${s.pp}</td><td class="num">${s.sf}-${s.sc}</td><td class="num">${s.pf}-${s.pc}</td><td class="num"><b>${s.pts}</b></td><td class="num"><b>${f1(s.pct)} %</b></td></tr>`).join('')}
-    </tbody></table></div><p class="pct">Desempates: enfrentamiento directo, diferencia de sets y diferencia de tantos entre los empatados. * = empate que sigue sin resolverse.</p></div>`;
+    ${st.map(s=>`<tr><td class="num">${s.pos}</td><td class="name">${esc(s.p.name)}</td><td class="num">${s.pj}</td><td class="num">${s.pg}</td><td class="num">${s.pp}</td><td class="num">${s.sf}-${s.sc}</td><td class="num">${s.pf}-${s.pc}</td><td class="num"><b>${s.pts}</b></td><td class="num"><b>${f1(s.pct)} %</b></td></tr>`).join('')}
+    </tbody></table></div><p class="pct">Quienes tienen los mismos puntos comparten la posición y el porcentaje. Los empates se resuelven al final de los 3 controles, en «Resultado final».</p></div>`;
   h+=`<div class="pcard" style="margin-top:12px"><h3 class="atth3">Partidos</h3><p class="pct" style="margin:0 0 6px">Al mejor de 5 sets. Toque un partido para anotar el resultado.</p>`;
   rounds.forEach((pr,ri)=>{
     h+=`<div class="attgrp">Ronda ${ri+1}</div>`;
@@ -2078,11 +2088,11 @@ function ctlSummaryHtml(d){
   const R=ctlSummary(d);
   return `<div class="pcard"><h3 class="atth3">Resultado final · ${esc(ctlCat().name)}</h3><p class="pct" style="margin:0 0 6px">Controles 75 % (25 % cada uno) + asistencia 10 % (${JDN.sessions} sesiones entre el ${esc(fmtDay(JDN.attFrom))} y el ${esc(fmtDay(JDN.attTo))}) + preparación física 15 % (nota del entrenador de 0 a 100).</p>
     <div class="tblwrap ptable"><table><thead><tr><th class="num">Pos.</th><th>Jugador</th>${JDN.controls.map(c=>`<th class="num">C${c.n}</th>`).join('')}<th class="num">Asistencia</th><th class="num">Prep. física</th><th class="num">Total</th></tr></thead><tbody>
-    ${R.map(r=>`<tr><td class="num">${r.pos}</td><td class="name">${esc(r.p.name)}</td>${r.cs.map(s=>`<td class="num">${s&&s.pj?f1(s.pct):'<span class="club">—</span>'}</td>`).join('')}
+    ${R.map(r=>`<tr><td class="num">${r.pos}${r.tied?' <span title="Empate sin resolver: valorar partido de desempate">*</span>':''}</td><td class="name">${esc(r.p.name)}${r.tieNote?` <small class="club" title="${esc(r.tieNote)}">(desempate)</small>`:''}</td>${r.cs.map(s=>`<td class="num">${s&&s.pj?f1(s.pct):'<span class="club">—</span>'}</td>`).join('')}
       <td class="num">${r.att?`${f1(r.att.pct)} <small class="club">(${r.att.n}/${JDN.sessions})</small>`:'<span class="club" title="No está en la lista de asistencia del club">—</span>'}</td>
       <td class="num"><input class="kfis" type="number" min="0" max="100" placeholder="0-100" data-kfis="${esc(r.p.id)}" value="${r.fis??''}"> ${r.fpct!=null?`<small class="club">${f1(r.fpct)}</small>`:''}</td>
       <td class="num"><b>${f1(r.total)} %</b></td></tr>`).join('')}
-    </tbody></table></div><p class="pct">C1–C3: porcentaje obtenido en cada control (máximo 25). La asistencia sale de Pasar lista (presente o tarde). Escriba la nota de preparación física y salga del campo para guardarla.</p></div>`;
+    </tbody></table></div><p class="pct">Si dos o más atletas terminan con el mismo total, se ordenan con los partidos de los 3 controles entre ellos: enfrentamiento directo, diferencia de sets y diferencia de tantos (pase el cursor sobre «desempate» para ver el detalle). * = sigue empatado: valorar un partido de desempate. C1–C3: porcentaje obtenido en cada control (máximo 25). La asistencia sale de Pasar lista (presente o tarde). Escriba la nota de preparación física y salga del campo para guardarla.</p></div>`;
 }
 function ctlReadSets(ed){
   const s=[];for(let i=0;i<5;i++){const x=ed.querySelector(`[data-ks="a${i}"]`).value,y=ed.querySelector(`[data-ks="b${i}"]`).value;if(x===''&&y==='')continue;if(x===''||y==='')return {err:`Falta un marcador en el set ${i+1}.`};const u=+x,v=+y;if(u===v)return {err:`El set ${i+1} no puede terminar empatado.`};if(Math.max(u,v)<11)return {err:`En el set ${i+1} nadie llegó a 11.`};s.push([u,v])}
@@ -2120,13 +2130,13 @@ async function pdfCtl(){
   if(KC.view==='sum'){
     const R=ctlSummary(d),doc=await newPdf(`${JDN.title} · ${cat.name}`,`Resultado final · ${A.club} · controles 75 %, asistencia 10 %, preparación física 15 %`);
     doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador',...JDN.controls.map(c=>'C'+c.n),'Asistencia','Prep. física','Total']],
-      body:R.map(r=>[r.pos,r.p.name,...r.cs.map(s=>s&&s.pj?f1(s.pct):'—'),r.att?`${f1(r.att.pct)} (${r.att.n}/${JDN.sessions})`:'—',r.fpct!=null?f1(r.fpct):'—',f1(r.total)+' %'])});
+      body:R.map(r=>[r.pos+(r.tied?' *':''),r.p.name,...r.cs.map(s=>s&&s.pj?f1(s.pct):'—'),r.att?`${f1(r.att.pct)} (${r.att.n}/${JDN.sessions})`:'—',r.fpct!=null?f1(r.fpct):'—',f1(r.total)+' %'])});
     pdfFooters(doc);doc.save(pdfName(['jdn-2027',cat.name,'resultado-final']));return;
   }
   const n=+KC.view,c=JDN.controls.find(x=>x.n===n),st=ctlStandings(d,n),ms=d.controls?.[n]?.matches||{},P=d.players,name=id=>P.find(p=>p.id===id)?.name||'?';
   const doc=await newPdf(`${JDN.title} · ${cat.name}`,`Control ${n} · ${fmtDay(c.date)} · ${A.club}`);
   doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador','PJ','PG','PP','Sets','Tantos','Puntos','% (de 25)']],
-    body:st.map(s=>[s.pos+(s.tied?' *':''),s.p.name,s.pj,s.pg,s.pp,`${s.sf}-${s.sc}`,`${s.pf}-${s.pc}`,s.pts,f1(s.pct)+' %'])});
+    body:st.map(s=>[s.pos,s.p.name,s.pj,s.pg,s.pp,`${s.sf}-${s.sc}`,`${s.pf}-${s.pc}`,s.pts,f1(s.pct)+' %'])});
   const body=[];rrRounds(P.map(p=>p.id)).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
     body.push([ri+1,`${name(a)} vs ${name(b)}`,!m?'Pendiente':m.skip?'No se jugó (justificado)':`${r.sa}-${r.sb}${m.wo?' (W.O.)':''}`,m&&m.s?m.s.map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', '):''])}));
   doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ronda','Partido','Resultado','Sets']],body});
