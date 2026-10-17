@@ -311,6 +311,8 @@ footer.src a{color:inherit}
 .revbtns [data-rev="inactive"]{color:var(--down)}
 .attshowinact{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin:4px 0 10px;cursor:pointer}
 .attshowinact input{width:auto}
+.attinact{margin-top:14px}
+.inrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .catfix{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 .catfix select{padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit}
 .rktbl{min-width:0;width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
@@ -465,6 +467,7 @@ footer.src a{color:inherit}
           <button class="chip" id="attAllPresent">Marcar sin marcar como presentes</button>
           <button class="chip" id="attCancel" aria-pressed="false">Sesión cancelada</button>
           <button class="chip" id="attAddAthlete">+ Agregar atleta</button>
+          <button class="chip" id="attEditRoll" aria-pressed="false" title="Muestra un botón para sacar de la lista a quienes ya no entrenan">Editar lista</button>
           <span id="attSaved" class="club"></span></div>
         <div id="attAddForm" class="attadd" hidden>
           <div class="f"><label for="attNewName">Nombre del atleta</label><input id="attNewName" type="text" placeholder="Nombre y apellidos"></div>
@@ -1550,7 +1553,7 @@ function attRenderRoll(){
     const g=a.review?'review':a.cat;
     if(g!==cur){cur=g;h+=g==='review'?`<div class="attgrp">Sin resultados en ${Math.max(...docs.map(d=>d.season))} — ¿siguen activos?</div><p class="pct attrevnote">Aparecen en los rankings con el club, pero no han competido este año. Marque «Inactivo» a quienes ya no entrenan; «Sigue activo» los pasa a su categoría.</p>`:`<div class="attgrp">${esc(g)}</div>`}
     const m=marks[a.id];
-    h+=`<div class="attrow${a.review?' attrev':''}" data-id="${esc(a.id)}"><div class="nm">${esc(a.name)} <small>${a.carne?'carné '+esc(a.carne):'sin carné'}${a.review?' · '+esc(a.cat):''}</small>${a.review?`<div class="revbtns"><button type="button" class="chip" data-rev="active">Sigue activo</button><button type="button" class="chip" data-rev="inactive">Inactivo</button></div>`:''}</div><div class="seg" role="group" aria-label="Asistencia de ${esc(a.name)}">${['P','A','J','T'].map(s=>`<button type="button" data-st="${s}" aria-pressed="${m===s}" title="${ATT_ST[s]}">${s==='J'?'Justif.':ATT_ST[s]}</button>`).join('')}</div></div>`;
+    h+=`<div class="attrow${a.review?' attrev':''}" data-id="${esc(a.id)}"><div class="nm">${esc(a.name)} <small>${a.carne?'carné '+esc(a.carne):'sin carné'}${a.review?' · '+esc(a.cat):''}</small>${a.review?`<div class="revbtns"><button type="button" class="chip" data-rev="active">Sigue activo</button><button type="button" class="chip" data-rev="inactive">Inactivo</button></div>`:A.editRoll?`<div class="revbtns"><button type="button" class="chip" data-rev="inactive">Marcar inactivo</button></div>`:''}</div><div class="seg" role="group" aria-label="Asistencia de ${esc(a.name)}">${['P','A','J','T'].map(s=>`<button type="button" data-st="${s}" aria-pressed="${m===s}" title="${ATT_ST[s]}">${s==='J'?'Justif.':ATT_ST[s]}</button>`).join('')}</div></div>`;
   }
   $('#attList').innerHTML=h;
 }
@@ -1575,6 +1578,7 @@ $('#attDate').addEventListener('change',e=>{if(e.target.value){attOpenDate(e.tar
 $('#attAllPresent').addEventListener('click',()=>{const m={};for(const a of A.roster.filter(x=>inCats(x,A.cats)&&!x.inactive&&!x.review))if(!A.session.marks[a.id]){m[a.id]='P';A.session.marks[a.id]='P'}A.sessions.set(A.date,A.session);attRenderRoll();attWrite(m)});
 $('#attCancel').addEventListener('click',async()=>{A.session.cancelled=!A.session.cancelled;A.sessions.set(A.date,A.session);attRenderRoll();
   try{await A.store.setCancelled(A.club,A.date,A.session.cancelled,A.user.email);$('#attSaved').textContent='Guardado ✓'}catch(e){$('#attSaved').textContent='No se pudo guardar. Revise la conexión.'}});
+$('#attEditRoll').addEventListener('click',e=>{A.editRoll=!A.editRoll;e.currentTarget.setAttribute('aria-pressed',String(A.editRoll));attRenderRoll()});
 $('#attAddAthlete').addEventListener('click',()=>{$('#attAddForm').hidden=!$('#attAddForm').hidden;$('#attNewName').focus()});
 $('#attNewCancel').addEventListener('click',()=>{$('#attAddForm').hidden=true});
 $('#attNewSave').addEventListener('click',async()=>{const name=$('#attNewName').value.trim();if(!name)return;
@@ -1646,6 +1650,12 @@ function attRankCell(a){const R=attRanking(a);if(!R||!R.length)return '<span cla
 const pctChip=p=>p==null?'—':`<span class="pctchip ${p<70?'lo':p>=90?'hi':''}">${p}%</span>`;
 // Inactive athletes appear in reports only with "Mostrar atletas inactivos" ticked (or while one is open)
 const attReportPeople=()=>A.roster.filter(a=>inCats(a,A.repCats)&&(!a.inactive||A.showInactive||a.id===A.who));
+// With "Mostrar atletas inactivos" ticked: every inactive athlete in the selected categories, with a button to reactivate
+function attInactiveBox(){
+  if(!A.showInactive)return '';
+  const L=A.roster.filter(a=>a.inactive&&inCats(a,A.repCats)).sort((a,b)=>ATT_CATS.indexOf(a.cat)-ATT_CATS.indexOf(b.cat)||a.name.localeCompare(b.name,'es'));
+  return `<div class="pcard attinact"><h3 class="atth3">Atletas inactivos (${L.length})</h3>${L.length?`<p class="pct" style="margin:0 0 8px">No aparecen en Pasar lista. «Reactivar» los devuelve a su categoría.</p>`+L.map(a=>`<div class="inrow"><span><b>${esc(a.name)}</b> <small class="club">${esc(a.cat)}${a.carne?' · carné '+esc(a.carne):''}</small></span><button type="button" class="chip" data-react="${esc(a.id)}">Reactivar</button></div>`).join(''):'<p class="pct">No hay atletas inactivos en estas categorías.</p>'}</div>`;
+}
 function attRenderReport(){
   if(!A.to)A.to=isoDay(new Date());if(!A.from)A.from=addDays(A.to,-30);
   $('#attFrom').value=A.from;$('#attTo').value=A.to;
@@ -1655,7 +1665,7 @@ function attRenderReport(){
   A.people=people;$('#attWhoQ').value=A.who?(people.find(a=>a.id===A.who)?.name||''):'';
   const sessions=attRangeSessions(),body=$('#attRepBody');
   const legend=`<div class="attlegend"><span><span class="stcell P">P</span> Presente</span><span><span class="stcell T">T</span> Tarde</span><span><span class="stcell J">J</span> Justificado</span><span><span class="stcell A">A</span> Ausente</span><span>% de asistencia = (presente + tarde) ÷ (presente + tarde + ausente); lo justificado no cuenta.</span></div>`;
-  if(!sessions.length&&!A.who){body.innerHTML=`<div class="pempty">No hay sesiones registradas entre el ${esc(fmtDay(A.from))} y el ${esc(fmtDay(A.to))}.</div>`;return}
+  if(!sessions.length&&!A.who){body.innerHTML=`<div class="pempty">No hay sesiones registradas entre el ${esc(fmtDay(A.from))} y el ${esc(fmtDay(A.to))}.</div>`+attInactiveBox();return}
   if(A.who){
     const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
     body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0">${esc(a.name)} · ${esc(fmtDay(A.from))} – ${esc(fmtDay(A.to))}</span>
@@ -1678,7 +1688,7 @@ function attRenderReport(){
     <div class="pcard"><h3 style="font-family:var(--display);margin:0 0 4px">Asistencia por sesión</h3>${legend}<div class="pchart" id="attChart"></div></div>
     <div class="tblwrap ptable"><table><thead><tr><th>Atleta</th><th>Categoría</th><th class="num">Sesiones</th><th class="num">Presente</th><th class="num">Tarde</th><th class="num">Justif.</th><th class="num">Ausente</th><th class="num">Asistencia</th><th class="num" title="Liga Menor: posición en su categoría y cambio vs la etapa anterior">Ranking</th></tr></thead><tbody>
     ${rows.map(({a,st})=>`<tr class="row attpick" data-id="${esc(a.id)}"><td class="name">${esc(a.name)}${a.inactive?' <small class="club">(inactivo)</small>':''}</td><td class="club">${esc(a.cat)}</td><td class="num">${st.total}</td><td class="num">${st.P}</td><td class="num">${st.T}</td><td class="num">${st.J}</td><td class="num">${st.A}</td><td class="num">${pctChip(st.pct)}</td><td class="num">${attRankCell(a)}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros para estas categorías en el periodo.</td></tr>'}
-    </tbody></table></div><p class="note">Toque un atleta para ver todos sus días.</p>`;
+    </tbody></table></div><p class="note">Toque un atleta para ver todos sus días.</p>`+attInactiveBox();
   attDrawChart(sessions,people);
 }
 function attDrawChart(sessions,people){
@@ -1713,7 +1723,8 @@ $('#attWhoQ').addEventListener('focus',attWhoSugg);
 $('#attWhoQ').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#attWhoSugg button[data-who]:not([data-who=""])');if(b){e.preventDefault();b.click()}}else if(e.key==='Escape')$('#attWhoSugg').hidden=true});
 $('#attWhoSugg').addEventListener('click',e=>{const b=e.target.closest('[data-who]');if(!b)return;A.who=b.dataset.who;$('#attWhoSugg').hidden=true;attRenderReport()});
 document.addEventListener('click',e=>{if(!e.target.closest('.attwho'))$('#attWhoSugg').hidden=true});
-$('#attRepBody').addEventListener('click',e=>{const r=e.target.closest('.attpick');if(r){A.who=r.dataset.id;attRenderReport();window.scrollTo(0,$('#attReport').offsetTop-20)}});
+$('#attRepBody').addEventListener('click',async e=>{
+  const ra=e.target.closest('[data-react]');if(ra){if(await attSetSetting(ra.dataset.react,{inactive:false,reviewed:true}))attRenderReport();return}const r=e.target.closest('.attpick');if(r){A.who=r.dataset.id;attRenderReport();window.scrollTo(0,$('#attReport').offsetTop-20)}});
 document.addEventListener('click',e=>{document.querySelectorAll('.catpick details[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
 async function pdfAtt(){
   const sessions=attRangeSessions(),people=attReportPeople();
@@ -1818,15 +1829,18 @@ function mtPlayerStages(carne){
   }
   return out;
 }
+// everyone in the selected rankings (so players without published matches can be found too), with their match count
 function mtPlayers(){
+  if(MT._pk===MT.season+'|'+MT.circuit+'|'+MT.div+'|'+MT.gender&&MT._p)return MT._p;
   const P=new Map();
-  for(const d of mtStages())for(const m of mtM(d))for(const p of [m.a,m.b]){if(!p||!p[0])continue;const x=P.get(p[0])||{carne:p[0],name:titleCase(p[1]),club:clubName(p[2]),n:0};if(!m.bye)x.n++;P.set(p[0],x)}
-  return [...P.values()];
+  for(const d of mtAll().filter(mtSel).sort((a,b)=>a.stage-b.stage))for(const r of d.rows){const x=P.get(r[1])||{carne:r[1],n:0,f:fold(r[2])};x.name=titleCase(r[2]);x.club=clubName(r[3]);P.set(r[1],x)}
+  for(const d of mtStages())for(const m of mtM(d))for(const p of [m.a,m.b]){if(!p||!p[0])continue;const x=P.get(p[0])||{carne:p[0],name:titleCase(p[1]),club:clubName(p[2]),n:0,f:fold(p[1])};if(!m.bye)x.n++;P.set(p[0],x)}
+  MT._pk=MT.season+'|'+MT.circuit+'|'+MT.div+'|'+MT.gender;MT._p=[...P.values()];return MT._p;
 }
 function mtSugg(){
   const q=fold($('#mq').value).trim(),box=$('#msugg');
-  const list=mtPlayers().filter(a=>!q||fold(a.name).includes(q)||a.carne.startsWith(q)).sort((a,b)=>(q?fold(b.name).startsWith(q)-fold(a.name).startsWith(q):0)||a.name.localeCompare(b.name,'es')).slice(0,12);
-  box.innerHTML=list.map(a=>`<button type="button" data-mwho="${esc(a.carne)}"><span>${esc(a.name)}</span><small>${esc(a.club)} · ${a.n} partido${a.n===1?'':'s'}</small></button>`).join('')||'<div class="empty" style="padding:10px 12px">Sin coincidencias en estos filtros</div>';
+  const list=mtPlayers().filter(a=>a.n>0&&(!q||a.f.includes(q)||a.carne.startsWith(q))).sort((a,b)=>(b.n>0)-(a.n>0)||(q?b.f.startsWith(q)-a.f.startsWith(q):0)||a.name.localeCompare(b.name,'es')).slice(0,12);
+  box.innerHTML=list.map(a=>`<button type="button" data-mwho="${esc(a.carne)}"><span>${esc(a.name)}</span><small>${esc(a.club)} · ${a.n?`${a.n} partido${a.n===1?'':'s'}`:'sin partidos publicados'}</small></button>`).join('')||'<div class="empty" style="padding:10px 12px">Sin coincidencias en estos filtros</div>';
   box.hidden=false;
 }
 const sgn=v=>v==null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v);
@@ -1841,6 +1855,12 @@ function mtRender(){
   const pl=MT.who&&mtPlayers().find(a=>a.carne===MT.who);
   if(!pl){if(MT.who)$('#mq').value='';MT.who='';body.innerHTML=`<div class="pempty">${st.length?'Escriba el nombre de un jugador para ver sus partidos.':`FECOTEME todavía no ha publicado partidos para ${esc([MT.circuit||'estos filtros',MT.div,MT.gender&&GENDER[MT.gender]].filter(Boolean).join(' · '))} en ${esc(MT.season)}: sus archivos solo traen el ranking final. Aparecerán aquí en cuanto publique un archivo con las hojas de grupos y la llave.`}</div>${avail}`;return}
   $('#mq').value=pl.name;
+  if(!pl.n){
+    const where=[...new Set(mtAll().filter(d=>mtSel(d)&&d._map.has(pl.carne)).map(seriesName))];
+    body.innerHTML=`<div class="pctl"><span class="summary" style="margin-left:0"><b>${esc(pl.name)}</b> · ${esc(pl.club)} · carné ${esc(pl.carne)}</span><button class="chip" data-mtplayer="${esc(pl.carne)}">Ver en Jugador</button></div>
+      <div class="pempty">No hay partidos publicados de ${esc(pl.name)} con estos filtros. Aparece en ${esc(where.join(', ')||'los rankings')}, pero FECOTEME solo publicó el ranking final de esas etapas, sin las hojas de grupos y la llave.</div>${avail}`;
+    return;
+  }
   const S=mtPlayerStages(MT.who),L=S.flatMap(s=>s.rows.filter(r=>!r.bye)),W=L.filter(x=>x.won).length,sw=L.reduce((s,x)=>s+x.sw,0),sl=L.reduce((s,x)=>s+x.sl,0),T=S.reduce((s,x)=>s+x.total,0);
   let h=`<div class="pctl"><span class="summary" style="margin-left:0"><b>${esc(pl.name)}</b> · ${esc(pl.club)} · carné ${esc(pl.carne)}</span><button class="chip" data-mtplayer="${esc(pl.carne)}">Ver en Jugador</button><button class="chip pdfbtn" data-pdf="matches">Descargar PDF</button></div>
     <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))">
