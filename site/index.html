@@ -2039,7 +2039,7 @@ function ctlRender(){
     box.innerHTML=h+`<div class="pempty">Todavía no se ha configurado ${esc(cat.name)}.<br><br>
       <button class="btn primary" data-kinit="list">Crear con los convocados del documento (${cat.players.length})</button> <button class="btn" data-kinit="empty">Empezar con la lista vacía</button></div>`;return}
   h+=`<div class="pctl" style="flex-wrap:wrap">${JDN.controls.map(c=>`<button class="chip" data-kview="${c.n}" aria-pressed="${KC.view===String(c.n)}">Control ${c.n} · ${esc(fmtDay(c.date))}</button>`).join('')}<button class="chip" data-kview="sum" aria-pressed="${KC.view==='sum'}">Resultado final</button><button class="chip" data-kview="players" aria-pressed="${KC.view==='players'}">Jugadores (${d.players.length})</button>
-    ${KC.view!=='players'?`<button class="chip pdfbtn" data-pdf="ctl">Descargar PDF</button>`:''}${ATT_DEMO&&/^\d$/.test(KC.view)?'<button class="chip" data-kdemo>Llenar con resultados de prueba</button>':''}<span class="club">${esc(KC.msg)}</span></div>`;
+    ${KC.view!=='players'?`<button class="chip pdfbtn" data-pdf="ctl">Descargar PDF</button>`:''}${ATT_DEMO&&/^\d$/.test(KC.view)?'<button class="chip" data-kdemo>Llenar con resultados de prueba</button>':''}${ATT_DEMO&&KC.cat==='u19f'?'<button class="chip" data-ktie>Simular empate en 4.º y 5.º lugar</button>':''}<span class="club">${esc(KC.msg)}</span></div>`;
   if(KC.view==='players')h+=ctlPlayersHtml(d);
   else if(KC.view==='sum')h+=ctlSummaryHtml(d);
   else h+=ctlControlHtml(d,+KC.view);
@@ -2112,6 +2112,7 @@ $('#attCtl').addEventListener('click',async e=>{
   if(t.dataset.kopen){KC.open=KC.open===t.dataset.kopen?null:t.dataset.kopen;ctlRender();return}
   if(t.dataset.kdel!==undefined){if(!confirm('¿Quitar a este jugador de la categoría?'))return;d.players=d.players.filter(p=>p.id!==t.dataset.kdel);await ctlSave();return}
   if(t.dataset.kadd!==undefined){const v=$('#kNew').value.trim();if(!v)return;const p=ctlNewPlayer(v);if(d.players.some(x=>x.id===p.id)){KC.msg='Ese jugador ya está en la lista.';ctlRender();return}d.players.push(p);await ctlSave();return}
+  if(t.dataset.ktie!==undefined){await ctlTieDemo();return}
   if(t.dataset.kdemo!==undefined){let seed=KC.view*97;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const P=d.players;
     for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const s=[];let wa=0,wb=0;while(wa<3&&wb<3){const aw=rnd()<0.5+(j-i)*0.04;const lo=Math.floor(rnd()*10);s.push(aw?[11,lo]:[lo,11]);aw?wa++:wb++}ctlSet(mKey(P[i].id,P[j].id),{a:P[i].id,b:P[j].id,s})}
     await ctlSave();return}
@@ -2125,6 +2126,24 @@ $('#attCtl').addEventListener('change',async e=>{
   const i=e.target.closest('[data-kfis]');if(!i)return;const d=KC.data[KC.cat];d.physical=d.physical||{};
   if(i.value==='')delete d.physical[i.dataset.kfis];else d.physical[i.dataset.kfis]=Math.max(0,Math.min(100,+i.value));await ctlSave();
 });
+// Test mode only: 3 controls for Sub-19 femenino where Mariana and Melissa finish level in 4th/5th
+async function ctlTieDemo(){
+  const d=KC.data[KC.cat],by=w=>d.players.find(p=>fold(p.name).includes(w));
+  const J=by('jimena'),Ab=by('abigail'),N=by('naima'),M=by('mariana'),L=by('melissa');
+  if(!J||!Ab||!N||!M||!L){KC.msg='Faltan jugadoras de la lista original.';ctlRender();return}
+  const W=(a,b,s)=>({a:a.id,b:b.id,s});   // a wins
+  const s30=[[11,6],[11,8],[11,7]],s31=[[11,9],[8,11],[11,7],[11,6]],s32=[[11,8],[9,11],[11,9],[7,11],[11,9]];
+  const base=[W(J,Ab,s31),W(J,N,s30),W(J,M,s30),W(J,L,s30),W(Ab,N,s31),W(Ab,M,s30),W(Ab,L,s30)];
+  const plan={1:[...base,W(N,M,s31),W(N,L,s31),W(M,L,s32)],     // Mariana beats Melissa
+              2:[...base,W(N,M,s30),W(N,L,s31),W(L,M,s31)],     // Melissa beats Mariana
+              3:[...base,W(N,M,s31),W(L,N,s32),W(M,L,s31)]};    // Mariana beats Melissa, Melissa beats Naima
+  d.controls={};for(const n in plan){d.controls[n]={matches:{}};for(const m of plan[n])d.controls[n].matches[mKey(m.a,m.b)]=m}
+  d.physical={[J.id]:90,[Ab.id]:85,[N.id]:75,[M.id]:70,[L.id]:70};
+  // same attendance for both, so the total is exactly equal
+  for(const s of [...A.sessions.values()].filter(s=>s.date>=JDN.attFrom&&s.date<=JDN.attTo)){
+    const mk=s.marks?.[M.id];if(mk&&s.marks[L.id]!==mk)await A.store.setMarks(A.club,s.date,{[L.id]:mk},'demo')}
+  await attReloadSessions();KC.view='sum';await ctlSave();
+}
 async function pdfCtl(){
   const d=KC.data[KC.cat];if(!d)return;const cat=ctlCat();
   if(KC.view==='sum'){
