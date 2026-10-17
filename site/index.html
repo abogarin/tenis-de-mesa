@@ -311,6 +311,18 @@ footer.src a{color:inherit}
 .revbtns [data-rev="inactive"]{color:var(--down)}
 .attshowinact{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin:4px 0 10px;cursor:pointer}
 .attshowinact input{width:auto}
+.kmatch{border:1px solid var(--line);border-radius:8px;margin:6px 0;background:var(--surface)}
+.kmatch.done{border-color:var(--up-soft)}
+.kmatch.rest{padding:8px 12px;border-style:dashed}
+.kmhead{display:flex;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;background:none;border:0;font:inherit;color:inherit;cursor:pointer;text-align:left;flex-wrap:wrap}
+.kmatch.open .kmhead{border-bottom:1px solid var(--line)}
+.keditor{padding:10px 12px}
+.ksets{display:grid;grid-template-columns:minmax(64px,1.6fr) repeat(5,minmax(30px,1fr));gap:6px;align-items:center;margin-bottom:8px}
+.ksets input{width:100%;min-width:0;padding:7px 4px;text-align:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);font:inherit;font-variant-numeric:tabular-nums}
+.ksets .nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ksets .club{font-size:11px;text-align:center}
+.keditor .attactions{flex-wrap:wrap}
+.kfis{width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font:inherit;text-align:right}
 .attinact{margin-top:14px}
 .inrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .catfix{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
@@ -348,6 +360,7 @@ footer.src a{color:inherit}
     <button class="tab" role="tab" id="tab-calc" aria-selected="false" data-tab="calc">Calculadora</button>
     <button class="tab" role="tab" id="tab-matches" aria-selected="false" data-tab="matches">Partidos</button>
     <button class="tab" role="tab" id="tab-att" aria-selected="false" data-tab="att">Asistencia 🔒</button>
+    <button class="tab" role="tab" id="tab-ctl" aria-selected="false" data-tab="ctl">Controles JDN 🔒</button>
     <button class="tab" role="tab" id="tab-clubs" aria-selected="false" data-tab="clubs" hidden>Clubes</button>
     <button class="tab" role="tab" id="tab-stages" aria-selected="false" data-tab="stages" hidden>Historial de etapas</button>
   </div>
@@ -439,9 +452,20 @@ footer.src a{color:inherit}
     </details>
   </section>
 
+  <section id="view-ctl" hidden>
+    <div class="ctlslot"></div>
+    <div id="ctlApp" hidden>
+      <div class="attdemo ctldemo" hidden><b>Modo de prueba.</b> Datos inventados, solo en este navegador: no se guardan en Firebase y desaparecen al recargar la página.</div>
+      <div class="atthead"><div><b class="ctlClub"></b> <span class="club ctlWho"></span></div>
+        <div class="pctl" style="margin:0"><button class="chip" id="ctlLogout">Salir</button></div></div>
+      <div id="attCtl"></div>
+    </div>
+  </section>
+
   <section id="view-att" hidden>
+    <div id="attShared">
     <div id="attLogin" class="attbox" hidden>
-      <h2>Asistencia a entrenamientos</h2>
+      <h2>Área de entrenadores</h2>
       <p class="club">Sección privada para entrenadores. Ingrese con su correo y contraseña.</p>
       <form id="attLoginForm" class="attform" autocomplete="on">
         <div class="f"><label for="attEmail">Correo</label><input id="attEmail" type="email" autocomplete="username" required></div>
@@ -451,8 +475,9 @@ footer.src a{color:inherit}
       </form>
     </div>
     <div id="attSetup" class="attbox" hidden>
-      <h2>Asistencia a entrenamientos</h2>
+      <h2>Área de entrenadores</h2>
       <p>Esta sección todavía no está conectada a Firebase. Complete el archivo <code>site/firebase-config.js</code> siguiendo las instrucciones del README.</p>
+    </div>
     </div>
     <div id="attApp" hidden>
       <div id="attDemo" class="attdemo" hidden><b>Modo de prueba.</b> Datos inventados, solo en este navegador: no se guardan en Firebase y desaparecen al recargar la página. Para el modo real, quite <code>?demo</code> de la dirección.</div>
@@ -1287,7 +1312,7 @@ async function pdfClubs(){
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-pdf]');if(!b)return;
   const label=b.textContent;b.disabled=true;b.textContent='Generando PDF…';
-  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs,calc:pdfCalc,matches:pdfMatches,att:pdfAtt})[b.dataset.pdf]();b.textContent=label}
+  try{await ({ranking:pdfRanking,player:pdfPlayer,compare:pdfCompare,clubs:pdfClubs,calc:pdfCalc,matches:pdfMatches,ctl:pdfCtl,att:pdfAtt})[b.dataset.pdf]();b.textContent=label}
   catch(err){console.error(err);b.textContent='No se pudo generar el PDF'}
   finally{b.disabled=false;setTimeout(()=>{b.textContent=label},2500)}
 });
@@ -1420,6 +1445,9 @@ async function firebaseStore(cfg){
     addAthlete:(club,a,who)=>db.collection('athletes').add({...a,club,createdBy:who,createdAt:FV.serverTimestamp()}),
     // per-athlete settings set by coaches: {cat (category correction), inactive, reviewed}
     settings:async club=>{const o={};(await db.collection('categories').where('club','==',club).get()).docs.forEach(d=>{const x=d.data();o[x.athlete]={cat:x.cat||null,inactive:!!x.inactive,reviewed:!!x.reviewed}});return o},
+    // internal selection controls (one document per event and category)
+    getSelection:async(club,key)=>{const s=await db.collection('selections').doc(slugify(club)+'__'+key).get();return s.exists?s.data():null},
+    saveSelection:(club,key,data,who)=>db.collection('selections').doc(slugify(club)+'__'+key).set({...data,club,...stamp(who)}),
     setSetting:(club,athlete,patch,who)=>db.collection('categories').doc(slugify(club)+'__'+slugify(athlete)).set({club,athlete,...patch,...stamp(who)},{merge:true}),
   };
 }
@@ -1442,7 +1470,7 @@ async function attSeedDemo(){
 }
 // In-memory stand-in used for testing the screens (demo mode)
 function mockStore(){
-  const S=new Map(),X=[],O={};let cb=null;
+  const S=new Map(),X=[],O={},SEL={};let cb=null;
   return {onAuth:f=>{cb=f;setTimeout(()=>f(null),0)},
     signIn:async(e,p)=>{if(p!=='prueba')throw {code:'auth/wrong-password'};cb({uid:'u1',email:e})},signOut:async()=>cb(null),reset:async()=>{},
     coach:async()=>({club:window.ATTENDANCE_CLUB||'Curridabat',name:'Entrenador de prueba'}),
@@ -1451,7 +1479,9 @@ function mockStore(){
     setMarks:async(club,date,marks)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};for(const c in marks){if(marks[c]===null)delete s.marks[c];else s.marks[c]=marks[c]}S.set(k,s)},
     setCancelled:async(club,date,v)=>{const k=sessId(club,date),s=S.get(k)||{club,date,marks:{}};s.cancelled=v;S.set(k,s)},
     athletes:async club=>X.filter(a=>a.club===club),addAthlete:async(club,a)=>{X.push({id:'m'+X.length,...a,club})},
-    settings:async()=>JSON.parse(JSON.stringify(O)),setSetting:async(club,id,patch)=>{O[id]={...(O[id]||{}),...patch}}};
+    settings:async()=>JSON.parse(JSON.stringify(O)),setSetting:async(club,id,patch)=>{O[id]={...(O[id]||{}),...patch}},
+    getSelection:async(club,key)=>SEL[slugify(club)+'__'+key]?JSON.parse(JSON.stringify(SEL[slugify(club)+'__'+key])):null,
+    saveSelection:async(club,key,data)=>{SEL[slugify(club)+'__'+key]=JSON.parse(JSON.stringify({...data,club}))}};
 }
 // Roster: athletes whose most recent ranking row (current season) lists this club; category = age category
 // Category = youngest Liga Menor list where the athlete has results this season (FECOTEME also lists kids in
@@ -1507,7 +1537,7 @@ async function attStart(){
   if(ATT_DEMO){$('#attLoginMsg').className='msg ok';$('#attLoginMsg').textContent='Modo de prueba: use cualquier correo y la contraseña «prueba». Nada se guarda en Firebase.'}
   A.store.onAuth(async user=>{
     A.user=user;if(A.unwatch){A.unwatch();A.unwatch=null}
-    if(!user){$('#attApp').hidden=true;$('#attLogin').hidden=false;return}
+    if(!user){A.ready=false;$('#attApp').hidden=true;$('#ctlApp').hidden=true;$('#attLogin').hidden=false;return}
     const coach=await A.store.coach(user.uid).catch(()=>null);
     if(!coach||!coach.club){$('#attLoginMsg').className='msg err';$('#attLoginMsg').textContent='Este usuario no está autorizado como entrenador. Pida acceso al administrador.';await A.store.signOut();return}
     A.coach=coach;A.club=coach.club;
@@ -1516,6 +1546,9 @@ async function attStart(){
     A.extra=await A.store.athletes(A.club).catch(()=>[]);A.over=await A.store.settings(A.club).catch(()=>({}));buildRoster();
     if(ATT_DEMO&&!A.seeded){A.seeded=true;await attSeedDemo();$('#attDemo').hidden=false}
     await attReloadSessions();attOpenDate(A.date);attRender();
+    $('#ctlApp').hidden=false;document.querySelector('.ctlClub').textContent=A.club;document.querySelector('.ctlWho').textContent='· '+(coach.name||user.email);
+    document.querySelector('.ctldemo').hidden=!ATT_DEMO;
+    A.ready=true;if(A.tab==='ctl')ctlStart();
   });
 }
 async function attReloadSessions(){const list=await A.store.sessions(A.club).catch(()=>[]);A.sessions=new Map(list.map(s=>[s.date,s]))}
@@ -1907,11 +1940,205 @@ async function pdfMatches(){
   doc.autoTable({...tableStyle,startY:doc._startY,head:[['Ronda','Rival','Club','Resultado','Parciales','Puntos']],body,columnStyles:{5:{halign:'right'}}});
   pdfFooters(doc);doc.save(pdfName(['partidos',pl.name,MT.season]));
 }
+/* ---------- Controles internos (selección JDN 2027) ---------- */
+// Round robin per category, best of 5; win = 2 points, loss = 0. Each control is 25 % of the final grade
+// (control % = points ÷ points possible × 25). Final = 3 controls (75 %) + attendance (10 %) + physical prep (15 %).
+const JDN={key:'jdn2027',title:'Juegos Deportivos Nacionales 2027',attFrom:'2026-10-13',attTo:'2026-12-03',sessions:16,
+  controls:[{n:1,date:'2026-10-22'},{n:2,date:'2026-11-12'},{n:3,date:'2026-12-03'}],
+  cats:[{key:'u15m',name:'Sub-15 masculino',players:['Alessandro Rimolo Villagra','Andrés Chacón Altamirano','Benjamín Calderón Ceciliano','Gael Dinarte Graeff','Isaac Rivera Torres','José Ignacio Retana Aguilar','Tobías Bogarín Cuadra']},
+        {key:'u19f',name:'Sub-19 femenino',players:['Abigail Pereira Obando','Jimena Calvo Alvarado','Mariana Rivera Torres','Melissa Lara Arroyo','Naima Jael Gómez Vargas']},
+        {key:'u19m',name:'Sub-19 masculino',players:['Esteban Chacón Altamirano','Francisco Guerrero','Ian Chinchilla Pereira','Josué David Tenorio Paniagua','Matías Feng','Santiago Brenes Herrera','Estéfano Tacsan Hidalgo']}]};
+const KC={cat:'u15m',view:'1',data:{},open:null,edit:false,msg:''};
+const ctlDocKey=cat=>JDN.key+'__'+cat;
+const ctlCat=()=>JDN.cats.find(c=>c.key===KC.cat);
+const mKey=(x,y)=>[x,y].sort().join('~');
+// match a typed name to the club roster (all words of the name present, accents ignored)
+function ctlFind(name){
+  const w=fold(name).split(/\s+/).filter(Boolean);
+  const hits=A.roster.filter(a=>{const t=fold(a.name).split(/\s+/);return w.every(x=>t.includes(x))});
+  return hits.length===1?hits[0]:null;
+}
+const ctlNewPlayer=name=>{const r=ctlFind(name);return r?{id:r.id,name:r.name,carne:r.carne||''}:{id:'n-'+slugify(name),name:titleCase(name),carne:''}};
+async function ctlLoad(cat){
+  if(KC.data[cat]!==undefined)return KC.data[cat];
+  KC.data[cat]=await A.store.getSelection(A.club,ctlDocKey(cat)).catch(e=>{console.error(e);return null});
+  return KC.data[cat];
+}
+async function ctlSave(){
+  const d=KC.data[KC.cat];KC.msg='Guardando…';ctlRender();
+  try{await A.store.saveSelection(A.club,ctlDocKey(KC.cat),d,A.user.email);KC.msg='Guardado ✓'}
+  catch(e){console.error(e);KC.msg='No se pudo guardar. Revise la conexión y las reglas de Firestore (colección selections).'}
+  ctlRender();
+}
+async function ctlStart(){await ctlLoad(KC.cat);ctlRender()}
+// circle method: n-1 rounds (n even; with an odd count one player rests each round)
+function rrRounds(ids){
+  const a=[...ids];if(a.length%2)a.push(null);const n=a.length,out=[];
+  for(let r=0;r<n-1;r++){const pr=[];for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];pr.push(r%2&&i===0?[y,x]:[x,y])}out.push(pr.sort((p,q)=>(!p[0]||!p[1])-(!q[0]||!q[1])));a.splice(1,0,a.pop())}
+  return out;
+}
+// result from a's point of view: {sa,sb,pa,pb,winner}  (null = not played yet)
+function mRes(m,a){
+  if(!m||m.skip)return null;const flip=m.a!==a;
+  if(m.wo){const w=m.wo==='a'?m.a:m.b;return {sa:w===a?3:0,sb:w===a?0:3,pa:0,pb:0,win:w===a,wo:true}}
+  let sa=0,sb=0,pa=0,pb=0;for(const [x,y] of m.s||[]){const [u,v]=flip?[y,x]:[x,y];pa+=u;pb+=v;if(u>v)sa++;else sb++}
+  return {sa,sb,pa,pb,win:sa>sb};
+}
+function ctlStandings(d,n){
+  const P=d.players,ms=d.controls?.[n]?.matches||{},S=new Map(P.map(p=>[p.id,{p,pj:0,pg:0,pp:0,sf:0,sc:0,pf:0,pc:0,pts:0,skip:0}]));
+  for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+    const m=ms[mKey(P[i].id,P[j].id)];if(m&&m.skip){S.get(P[i].id).skip++;S.get(P[j].id).skip++;continue}
+    for(const [x,y] of [[P[i].id,P[j].id],[P[j].id,P[i].id]]){const r=mRes(m,x);if(!r)continue;const s=S.get(x);s.pj++;r.win?(s.pg++,s.pts+=2):s.pp++;s.sf+=r.sa;s.sc+=r.sb;s.pf+=r.pa;s.pc+=r.pb}
+  }
+  const L=[...S.values()],complete=L.every(s=>s.pj+s.skip===P.length-1);
+  for(const s of L){const possible=2*(P.length-1-s.skip);s.pct=possible>0?25*s.pts/possible:0}
+  // ties: head-to-head among the tied players, then set difference, then point difference among them
+  const mini=(grp)=>{const ids=new Set(grp.map(s=>s.p.id)),M=new Map(grp.map(s=>[s.p.id,{w:0,sd:0,pd:0}]));
+    for(const a of ids)for(const b of ids){if(a>=b)continue;const m=ms[mKey(a,b)];for(const [x,y] of [[a,b],[b,a]]){const r=mRes(m,x);if(!r)continue;const t=M.get(x);if(r.win)t.w++;t.sd+=r.sa-r.sb;t.pd+=r.pa-r.pb}}
+    return M};
+  L.sort((x,y)=>y.pts-x.pts);
+  const out=[];
+  for(let i=0;i<L.length;){let j=i;while(j<L.length&&L[j].pts===L[i].pts)j++;const g=L.slice(i,j);
+    if(g.length>1){const M=mini(g);g.forEach(s=>s.tb=M.get(s.p.id));g.sort((x,y)=>y.tb.w-x.tb.w||y.tb.sd-x.tb.sd||y.tb.pd-x.tb.pd||x.p.name.localeCompare(y.p.name,'es'));
+      if(complete)for(let k=1;k<g.length;k++){const a=g[k-1].tb,b=g[k].tb;if(a.w===b.w&&a.sd===b.sd&&a.pd===b.pd){g[k].tied=g[k-1].tied=true}}}
+    out.push(...g);i=j}
+  out.forEach((s,k)=>s.pos=k+1);
+  return out;
+}
+function ctlAttendance(p){
+  const ss=[...A.sessions.values()].filter(s=>!s.cancelled&&s.date>=JDN.attFrom&&s.date<=JDN.attTo);
+  const id=A.roster.find(a=>a.id===p.id)?p.id:null;if(!id)return null;
+  const n=ss.filter(s=>['P','T'].includes(s.marks?.[id])).length;
+  return {n,pct:Math.min(10,10*n/JDN.sessions)};
+}
+const f1=v=>(Math.round(v*10)/10).toLocaleString('es-CR',{minimumFractionDigits:1,maximumFractionDigits:1});
+function ctlSummary(d){
+  const st=JDN.controls.map(c=>new Map(ctlStandings(d,c.n).map(s=>[s.p.id,s])));
+  const rows=d.players.map(p=>{
+    const cs=st.map(m=>m.get(p.id)),cpct=cs.reduce((t,s)=>t+(s?.pct||0),0),att=ctlAttendance(p),fis=d.physical?.[p.id];
+    const fpct=fis!=null&&fis!==''?15*Math.max(0,Math.min(100,+fis))/100:null;
+    return {p,cs,cpct,att,fis,fpct,total:cpct+(att?.pct||0)+(fpct||0)};
+  }).sort((x,y)=>y.total-x.total);
+  rows.forEach((r,i)=>r.pos=i+1);return rows;
+}
+function ctlRender(){
+  const box=$('#attCtl'),cat=ctlCat(),d=KC.data[KC.cat];
+  let h=`<div class="pctl" style="flex-wrap:wrap"><b class="atth3" style="margin-right:6px">${esc(JDN.title)}</b>${JDN.cats.map(c=>`<button class="chip" data-kcat="${c.key}" aria-pressed="${c.key===KC.cat}">${esc(c.name)}</button>`).join('')}</div>`;
+  if(d===undefined){box.innerHTML=h+'<div class="pempty">Cargando…</div>';return}
+  if(!d){
+    box.innerHTML=h+`<div class="pempty">Todavía no se ha configurado ${esc(cat.name)}.<br><br>
+      <button class="btn primary" data-kinit="list">Crear con los convocados del documento (${cat.players.length})</button> <button class="btn" data-kinit="empty">Empezar con la lista vacía</button></div>`;return}
+  h+=`<div class="pctl" style="flex-wrap:wrap">${JDN.controls.map(c=>`<button class="chip" data-kview="${c.n}" aria-pressed="${KC.view===String(c.n)}">Control ${c.n} · ${esc(fmtDay(c.date))}</button>`).join('')}<button class="chip" data-kview="sum" aria-pressed="${KC.view==='sum'}">Resultado final</button><button class="chip" data-kview="players" aria-pressed="${KC.view==='players'}">Jugadores (${d.players.length})</button>
+    ${KC.view!=='players'?`<button class="chip pdfbtn" data-pdf="ctl">Descargar PDF</button>`:''}${ATT_DEMO&&/^\d$/.test(KC.view)?'<button class="chip" data-kdemo>Llenar con resultados de prueba</button>':''}<span class="club">${esc(KC.msg)}</span></div>`;
+  if(KC.view==='players')h+=ctlPlayersHtml(d);
+  else if(KC.view==='sum')h+=ctlSummaryHtml(d);
+  else h+=ctlControlHtml(d,+KC.view);
+  box.innerHTML=h;
+}
+function ctlPlayersHtml(d){
+  return `<div class="pcard"><h3 class="atth3">Jugadores de ${esc(ctlCat().name)}</h3><p class="pct" style="margin:0 0 8px">Los partidos de cada control se arman con esta lista (todos contra todos). Quienes están en la lista de asistencia del club suman su asistencia automáticamente.</p>
+    ${d.players.map(p=>`<div class="inrow"><span><b>${esc(p.name)}</b> <small class="club">${p.carne?'carné '+esc(p.carne):A.roster.find(a=>a.id===p.id)?'en la lista del club':'sin carné · la asistencia no se calcula'}</small></span><button type="button" class="chip" data-kdel="${esc(p.id)}">Quitar</button></div>`).join('')}
+    <div class="attadd" style="margin-top:10px"><div class="f"><label for="kNew">Agregar jugador</label><input id="kNew" type="text" placeholder="Nombre y apellidos" list="kRoster"><datalist id="kRoster">${A.roster.map(a=>`<option value="${esc(a.name)}">`).join('')}</datalist></div>
+    <div class="attactions"><button class="btn primary" data-kadd type="button">Agregar</button></div></div>
+    <p class="pct">Si ya hay resultados registrados, quitar a un jugador elimina sus partidos de los cálculos.</p></div>`;
+}
+function ctlControlHtml(d,n){
+  const P=d.players,ms=d.controls?.[n]?.matches||{},rounds=rrRounds(P.map(p=>p.id)),name=id=>P.find(p=>p.id===id)?.name||'?';
+  const total=P.length*(P.length-1)/2,done=Object.keys(ms).filter(k=>{const [x,y]=k.split('~');return P.some(p=>p.id===x)&&P.some(p=>p.id===y)}).length;
+  const st=ctlStandings(d,n);
+  let h=`<div class="pcard"><h3 class="atth3">Clasificación · Control ${n}</h3><p class="pct" style="margin:0 0 6px">${done} de ${total} partidos registrados. Partido ganado = 2 puntos; % del control = puntos ÷ puntos posibles × 25 %.</p>
+    <div class="tblwrap ptable" style="margin-top:6px"><table><thead><tr><th class="num">Pos.</th><th>Jugador</th><th class="num">PJ</th><th class="num">PG</th><th class="num">PP</th><th class="num">Sets</th><th class="num">Tantos</th><th class="num">Puntos</th><th class="num">% (de 25)</th></tr></thead><tbody>
+    ${st.map(s=>`<tr><td class="num">${s.pos}${s.tied?' <span title="Empate sin resolver: valorar partido de desempate">*</span>':''}</td><td class="name">${esc(s.p.name)}</td><td class="num">${s.pj}</td><td class="num">${s.pg}</td><td class="num">${s.pp}</td><td class="num">${s.sf}-${s.sc}</td><td class="num">${s.pf}-${s.pc}</td><td class="num"><b>${s.pts}</b></td><td class="num"><b>${f1(s.pct)} %</b></td></tr>`).join('')}
+    </tbody></table></div><p class="pct">Desempates: enfrentamiento directo, diferencia de sets y diferencia de tantos entre los empatados. * = empate que sigue sin resolverse.</p></div>`;
+  h+=`<div class="pcard" style="margin-top:12px"><h3 class="atth3">Partidos</h3><p class="pct" style="margin:0 0 6px">Al mejor de 5 sets. Toque un partido para anotar el resultado.</p>`;
+  rounds.forEach((pr,ri)=>{
+    h+=`<div class="attgrp">Ronda ${ri+1}</div>`;
+    for(const [a,b] of pr){
+      if(!a||!b){h+=`<div class="kmatch rest"><span class="club">Descansa: ${esc(name(a||b))}</span></div>`;continue}
+      const k=mKey(a,b),m=ms[k],r=m?mRes(m,a):null,open=KC.open===k;
+      const res=!m?'<span class="club">Pendiente</span>':m.skip?'<span class="club">No se jugó (justificado)</span>':`<span class="mres ${r.win?'w':'l'}">${r.win?'G':'P'}</span> <b>${r.sa}–${r.sb}</b>${m.wo?' <small class="club">W.O.</small>':` <small class="club">${(m.s||[]).map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', ')}</small>`}`;
+      h+=`<div class="kmatch${m?' done':''}${open?' open':''}"><button type="button" class="kmhead" data-kopen="${esc(k)}"><span><b>${esc(name(a))}</b> vs <b>${esc(name(b))}</b></span><span>${res}</span></button>${open?ctlEditor(m,a,b,name):''}</div>`;
+    }
+  });
+  return h+'</div>';
+}
+function ctlEditor(m,a,b,name){
+  const s=m&&!m.wo&&!m.skip?(m.a===a?m.s:m.s.map(([x,y])=>[y,x])):[];
+  return `<div class="keditor" data-ka="${esc(a)}" data-kb="${esc(b)}">
+    <div class="ksets"><span></span>${[1,2,3,4,5].map(i=>`<span class="club">Set ${i}</span>`).join('')}
+    <span class="nm">${esc(name(a))}</span>${[0,1,2,3,4].map(i=>`<input type="number" min="0" max="99" inputmode="numeric" data-ks="a${i}" value="${s[i]?s[i][0]:''}">`).join('')}
+    <span class="nm">${esc(name(b))}</span>${[0,1,2,3,4].map(i=>`<input type="number" min="0" max="99" inputmode="numeric" data-ks="b${i}" value="${s[i]?s[i][1]:''}">`).join('')}</div>
+    <div class="attactions"><button class="btn primary" type="button" data-ksave>Guardar resultado</button>
+      <button class="btn" type="button" data-kwo="a" title="El rival no se presentó sin justificación">Gana ${esc(name(a).split(' ')[0])} por W.O.</button>
+      <button class="btn" type="button" data-kwo="b">Gana ${esc(name(b).split(' ')[0])} por W.O.</button>
+      <button class="btn" type="button" data-kskip title="Ausencia justificada: el partido no cuenta para ninguno">No se jugó (justificado)</button>
+      ${m?'<button class="btn" type="button" data-kclear>Borrar</button>':''}</div><p class="msg err" data-kerr></p></div>`;
+}
+function ctlSummaryHtml(d){
+  const R=ctlSummary(d);
+  return `<div class="pcard"><h3 class="atth3">Resultado final · ${esc(ctlCat().name)}</h3><p class="pct" style="margin:0 0 6px">Controles 75 % (25 % cada uno) + asistencia 10 % (${JDN.sessions} sesiones entre el ${esc(fmtDay(JDN.attFrom))} y el ${esc(fmtDay(JDN.attTo))}) + preparación física 15 % (nota del entrenador de 0 a 100).</p>
+    <div class="tblwrap ptable"><table><thead><tr><th class="num">Pos.</th><th>Jugador</th>${JDN.controls.map(c=>`<th class="num">C${c.n}</th>`).join('')}<th class="num">Asistencia</th><th class="num">Prep. física</th><th class="num">Total</th></tr></thead><tbody>
+    ${R.map(r=>`<tr><td class="num">${r.pos}</td><td class="name">${esc(r.p.name)}</td>${r.cs.map(s=>`<td class="num">${s&&s.pj?f1(s.pct):'<span class="club">—</span>'}</td>`).join('')}
+      <td class="num">${r.att?`${f1(r.att.pct)} <small class="club">(${r.att.n}/${JDN.sessions})</small>`:'<span class="club" title="No está en la lista de asistencia del club">—</span>'}</td>
+      <td class="num"><input class="kfis" type="number" min="0" max="100" placeholder="0-100" data-kfis="${esc(r.p.id)}" value="${r.fis??''}"> ${r.fpct!=null?`<small class="club">${f1(r.fpct)}</small>`:''}</td>
+      <td class="num"><b>${f1(r.total)} %</b></td></tr>`).join('')}
+    </tbody></table></div><p class="pct">C1–C3: porcentaje obtenido en cada control (máximo 25). La asistencia sale de Pasar lista (presente o tarde). Escriba la nota de preparación física y salga del campo para guardarla.</p></div>`;
+}
+function ctlReadSets(ed){
+  const s=[];for(let i=0;i<5;i++){const x=ed.querySelector(`[data-ks="a${i}"]`).value,y=ed.querySelector(`[data-ks="b${i}"]`).value;if(x===''&&y==='')continue;if(x===''||y==='')return {err:`Falta un marcador en el set ${i+1}.`};const u=+x,v=+y;if(u===v)return {err:`El set ${i+1} no puede terminar empatado.`};if(Math.max(u,v)<11)return {err:`En el set ${i+1} nadie llegó a 11.`};s.push([u,v])}
+  const wa=s.filter(([u,v])=>u>v).length,wb=s.length-wa;
+  if(Math.max(wa,wb)!==3)return {err:'Al mejor de 5: el ganador debe tener 3 sets.'};
+  // no sets after the match was decided
+  let ca=0,cb=0;for(let i=0;i<s.length;i++){if(ca===3||cb===3)return {err:'Hay sets anotados después de que el partido ya estaba decidido.'};s[i][0]>s[i][1]?ca++:cb++}
+  return {s};
+}
+function ctlSet(k,val){const d=KC.data[KC.cat];d.controls=d.controls||{};const c=d.controls[KC.view]=d.controls[KC.view]||{matches:{}};if(val)c.matches[k]=val;else delete c.matches[k]}
+$('#ctlLogout').addEventListener('click',()=>A.store.signOut());
+$('#attCtl').addEventListener('click',async e=>{
+  const t=e.target.closest('button');if(!t)return;const d=KC.data[KC.cat];
+  if(t.dataset.kcat){KC.cat=t.dataset.kcat;KC.open=null;KC.msg='';await ctlLoad(KC.cat);ctlRender();return}
+  if(t.dataset.kinit){KC.data[KC.cat]={event:JDN.key,cat:KC.cat,players:t.dataset.kinit==='list'?ctlCat().players.map(ctlNewPlayer):[],controls:{},physical:{}};KC.view=t.dataset.kinit==='list'?'1':'players';await ctlSave();return}
+  if(t.dataset.kview){KC.view=t.dataset.kview;KC.open=null;ctlRender();return}
+  if(t.dataset.kopen){KC.open=KC.open===t.dataset.kopen?null:t.dataset.kopen;ctlRender();return}
+  if(t.dataset.kdel!==undefined){if(!confirm('¿Quitar a este jugador de la categoría?'))return;d.players=d.players.filter(p=>p.id!==t.dataset.kdel);await ctlSave();return}
+  if(t.dataset.kadd!==undefined){const v=$('#kNew').value.trim();if(!v)return;const p=ctlNewPlayer(v);if(d.players.some(x=>x.id===p.id)){KC.msg='Ese jugador ya está en la lista.';ctlRender();return}d.players.push(p);await ctlSave();return}
+  if(t.dataset.kdemo!==undefined){let seed=KC.view*97;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const P=d.players;
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const s=[];let wa=0,wb=0;while(wa<3&&wb<3){const aw=rnd()<0.5+(j-i)*0.04;const lo=Math.floor(rnd()*10);s.push(aw?[11,lo]:[lo,11]);aw?wa++:wb++}ctlSet(mKey(P[i].id,P[j].id),{a:P[i].id,b:P[j].id,s})}
+    await ctlSave();return}
+  const ed=t.closest('.keditor');if(!ed)return;const a=ed.dataset.ka,b=ed.dataset.kb,k=mKey(a,b);
+  if(t.dataset.ksave!==undefined){const r=ctlReadSets(ed);if(r.err){ed.querySelector('[data-kerr]').textContent=r.err;return}ctlSet(k,{a,b,s:r.s});KC.open=null;await ctlSave();return}
+  if(t.dataset.kwo){ctlSet(k,{a,b,wo:t.dataset.kwo});KC.open=null;await ctlSave();return}
+  if(t.dataset.kskip!==undefined){ctlSet(k,{a,b,skip:true});KC.open=null;await ctlSave();return}
+  if(t.dataset.kclear!==undefined){ctlSet(k,null);KC.open=null;await ctlSave();return}
+});
+$('#attCtl').addEventListener('change',async e=>{
+  const i=e.target.closest('[data-kfis]');if(!i)return;const d=KC.data[KC.cat];d.physical=d.physical||{};
+  if(i.value==='')delete d.physical[i.dataset.kfis];else d.physical[i.dataset.kfis]=Math.max(0,Math.min(100,+i.value));await ctlSave();
+});
+async function pdfCtl(){
+  const d=KC.data[KC.cat];if(!d)return;const cat=ctlCat();
+  if(KC.view==='sum'){
+    const R=ctlSummary(d),doc=await newPdf(`${JDN.title} · ${cat.name}`,`Resultado final · ${A.club} · controles 75 %, asistencia 10 %, preparación física 15 %`);
+    doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador',...JDN.controls.map(c=>'C'+c.n),'Asistencia','Prep. física','Total']],
+      body:R.map(r=>[r.pos,r.p.name,...r.cs.map(s=>s&&s.pj?f1(s.pct):'—'),r.att?`${f1(r.att.pct)} (${r.att.n}/${JDN.sessions})`:'—',r.fpct!=null?f1(r.fpct):'—',f1(r.total)+' %'])});
+    pdfFooters(doc);doc.save(pdfName(['jdn-2027',cat.name,'resultado-final']));return;
+  }
+  const n=+KC.view,c=JDN.controls.find(x=>x.n===n),st=ctlStandings(d,n),ms=d.controls?.[n]?.matches||{},P=d.players,name=id=>P.find(p=>p.id===id)?.name||'?';
+  const doc=await newPdf(`${JDN.title} · ${cat.name}`,`Control ${n} · ${fmtDay(c.date)} · ${A.club}`);
+  doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador','PJ','PG','PP','Sets','Tantos','Puntos','% (de 25)']],
+    body:st.map(s=>[s.pos+(s.tied?' *':''),s.p.name,s.pj,s.pg,s.pp,`${s.sf}-${s.sc}`,`${s.pf}-${s.pc}`,s.pts,f1(s.pct)+' %'])});
+  const body=[];rrRounds(P.map(p=>p.id)).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
+    body.push([ri+1,`${name(a)} vs ${name(b)}`,!m?'Pendiente':m.skip?'No se jugó (justificado)':`${r.sa}-${r.sb}${m.wo?' (W.O.)':''}`,m&&m.s?m.s.map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', '):''])}));
+  doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ronda','Partido','Resultado','Sets']],body});
+  pdfFooters(doc);doc.save(pdfName(['jdn-2027',cat.name,'control',n]));
+}
 function showTab(name){
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===name)));
   $('#view-rank').hidden=name!=='rank';$('#view-stages').hidden=name!=='stages';$('#view-player').hidden=name!=='player';$('#view-compare').hidden=name!=='compare';$('#view-clubs').hidden=name!=='clubs';$('#view-calc').hidden=name!=='calc';$('#view-matches').hidden=name!=='matches';
   if(name==='matches')mtStart();$('#view-att').hidden=name!=='att';
-  if(name==='att')attStart();
+  A.tab=name;$('#view-ctl').hidden=name!=='ctl';
+  if(name==='att'){$('#view-att').prepend($('#attShared'));attStart()}
+  if(name==='ctl'){document.querySelector('#view-ctl .ctlslot').append($('#attShared'));attStart();if(A.ready)ctlStart()}
   if(name==='calc'){buildCalcOptions();renderCalc()}
   if(name==='clubs'){buildClubFilters();renderClubs()}
   if(name==='player')renderPlayer();
