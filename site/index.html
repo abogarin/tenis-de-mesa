@@ -2003,7 +2003,7 @@ function ctlAttendance(p){
   const n=ss.filter(s=>['P','T'].includes(s.marks?.[id])).length;
   return {n,pct:Math.min(10,10*n/JDN.sessions)};
 }
-const f1=v=>(Math.round(v*10)/10).toLocaleString('es-CR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f1=v=>(Math.round(v*100)/100).toLocaleString('es-CR',{minimumFractionDigits:2,maximumFractionDigits:2});   // 2 decimals
 function ctlSummary(d){
   const st=JDN.controls.map(c=>new Map(ctlStandings(d,c.n).map(s=>[s.p.id,s])));
   const rows=d.players.map(p=>{
