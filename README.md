@@ -96,6 +96,9 @@ Coaches log in and take training attendance for their club's athletes. The data 
 - **Pasar lista:** choose the date and one or more categories, then tap Presente / Ausente / Justificado / Tarde. Every tap saves immediately. **Sesión cancelada** excludes that day from the percentages.
 - **Reporte:** choose a period, categories and optionally one athlete. Attendance % = (present + late) ÷ (present + late + absent); justified absences don't count.
 
+### Controles JDN (internal selection)
+Its own private tab (same coach login as Asistencia). For each category (Sub-15 masculino, Sub-19 femenino, Sub-19 masculino) the coach keeps the player list, and the page builds the round-robin matches for each of the 3 controls. Results are entered set by set (best of 5), or as W.O. / not played (justified). Each control: win = 2 points, and the control's share = points ÷ points possible × 25 %. Ties are broken by head-to-head, then set difference, then point difference among the tied players. **Resultado final** adds the 3 controls (75 %), attendance between 13 Oct and 3 Dec out of 16 sessions (10 %) and the coach's physical-preparation grade 0–100 (15 %). Stored in the `selections` collection; the dates, categories and called-up players are at the top of the `JDN` block in index.html.
+
 ### One-time Firebase setup
 1. Go to https://console.firebase.google.com → **Add project** (e.g. `tm-curridabat`). Google Analytics is not needed.
 2. **Build → Authentication → Get started → Email/Password → Enable.**
