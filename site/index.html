@@ -1945,7 +1945,10 @@ async function pdfMatches(){
 // (control % = points ÷ points possible × 25). Final = 3 controls (75 %) + attendance (10 %) + physical prep (15 %).
 const JDN={key:'jdn2027',title:'Juegos Deportivos Nacionales 2027',attFrom:'2026-10-13',attTo:'2026-12-03',sessions:16,
   controls:[{n:1,date:'2026-10-22'},{n:2,date:'2026-11-12'},{n:3,date:'2026-12-03'}],
-  cats:[{key:'u15m',name:'Sub-15 masculino',players:['Alessandro Rimolo Villagra','Andrés Chacón Altamirano','Benjamín Calderón Ceciliano','Gael Dinarte Graeff','Isaac Rivera Torres','José Ignacio Retana Aguilar','Tobías Bogarín Cuadra']},
+  cats:[{key:'u15m',name:'Sub-15 masculino',
+          // fixed order of rounds requested by the coach (surnames); [match, match, match, rests]
+          rounds:[['bogarin-rimolo','rivera-dinarte','retana-chacon','calderon'],['bogarin-calderon','rimolo-dinarte','rivera-retana','chacon'],['bogarin-rivera','calderon-rimolo','dinarte-chacon','retana'],['dinarte-retana','calderon-chacon','rimolo-rivera','bogarin'],['bogarin-dinarte','retana-calderon','chacon-rivera','rimolo'],['bogarin-chacon','dinarte-calderon','rimolo-retana','rivera'],['bogarin-retana','chacon-rimolo','calderon-rivera','dinarte']],
+          players:['Alessandro Rimolo Villagra','Andrés Chacón Altamirano','Benjamín Calderón Ceciliano','Gael Dinarte Graeff','Isaac Rivera Torres','José Ignacio Retana Aguilar','Tobías Bogarín Cuadra']},
         {key:'u19f',name:'Sub-19 femenino',players:['Abigail Pereira Obando','Jimena Calvo Alvarado','Mariana Rivera Torres','Melissa Lara Arroyo','Naima Jael Gómez Vargas']},
         {key:'u19m',name:'Sub-19 masculino',players:['Esteban Chacón Altamirano','Francisco Guerrero','Ian Chinchilla Pereira','Josué David Tenorio Paniagua','Matías Feng','Santiago Brenes Herrera','Estéfano Tacsan Hidalgo']}]};
 const KC={cat:'u15m',view:'1',data:{},open:null,edit:false,msg:''};
@@ -1972,6 +1975,18 @@ async function ctlSave(){
 }
 async function ctlStart(){await ctlLoad(KC.cat);ctlRender()}
 // circle method: n-1 rounds (n even; with an odd count one player rests each round)
+// Rounds for a category: the coach's fixed order when it fits the current player list, otherwise the standard rotation
+function ctlRounds(d){
+  const cat=JDN.cats.find(c=>c.key===d.cat),ids=d.players.map(p=>p.id);
+  if(cat?.rounds){
+    const by=w=>{const h=d.players.filter(p=>fold(p.name).split(/\s+/).includes(w));return h.length===1?h[0].id:null};
+    const out=cat.rounds.map(r=>{const rest=by(r[r.length-1]);return [...r.slice(0,-1).map(m=>m.split('-').map(by)),[rest,null]]});
+    const pairs=new Set(out.flatMap(r=>r.filter(([a,b])=>a&&b).map(([a,b])=>mKey(a,b))));
+    const ok=out.every(r=>r.flat().filter(Boolean).length===r.length*2-1||r.every(([a,b])=>a&&b||a&&!b))&&pairs.size===ids.length*(ids.length-1)/2&&out.flat(2).filter(Boolean).every(x=>ids.includes(x));
+    if(ok)return out;
+  }
+  return rrRounds(ids);
+}
 function rrRounds(ids){
   const a=[...ids];if(a.length%2)a.push(null);const n=a.length,out=[];
   for(let r=0;r<n-1;r++){const pr=[];for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];pr.push(r%2&&i===0?[y,x]:[x,y])}out.push(pr.sort((p,q)=>(!p[0]||!p[1])-(!q[0]||!q[1])));a.splice(1,0,a.pop())}
@@ -2053,7 +2068,7 @@ function ctlPlayersHtml(d){
     <p class="pct">Si ya hay resultados registrados, quitar a un jugador elimina sus partidos de los cálculos.</p></div>`;
 }
 function ctlControlHtml(d,n){
-  const P=d.players,ms=d.controls?.[n]?.matches||{},rounds=rrRounds(P.map(p=>p.id)),name=id=>P.find(p=>p.id===id)?.name||'?';
+  const P=d.players,ms=d.controls?.[n]?.matches||{},rounds=ctlRounds(d),name=id=>P.find(p=>p.id===id)?.name||'?';
   const total=P.length*(P.length-1)/2,done=Object.keys(ms).filter(k=>{const [x,y]=k.split('~');return P.some(p=>p.id===x)&&P.some(p=>p.id===y)}).length;
   const st=ctlStandings(d,n);
   let h=`<div class="pcard"><h3 class="atth3">Clasificación · Control ${n}</h3><p class="pct" style="margin:0 0 6px">${done} de ${total} partidos registrados. Partido ganado = 2 puntos; % del control = puntos ÷ puntos posibles × 25 %.</p>
@@ -2063,11 +2078,13 @@ function ctlControlHtml(d,n){
   h+=`<div class="pcard" style="margin-top:12px"><h3 class="atth3">Partidos</h3><p class="pct" style="margin:0 0 6px">Al mejor de 5 sets. Toque un partido para anotar el resultado.</p>`;
   rounds.forEach((pr,ri)=>{
     h+=`<div class="attgrp">Ronda ${ri+1}</div>`;
+    let mesa=0;
     for(const [a,b] of pr){
       if(!a||!b){h+=`<div class="kmatch rest"><span class="club">Descansa: ${esc(name(a||b))}</span></div>`;continue}
+      mesa++;
       const k=mKey(a,b),m=ms[k],r=m?mRes(m,a):null,open=KC.open===k;
       const res=!m?'<span class="club">Pendiente</span>':m.skip?'<span class="club">No se jugó (justificado)</span>':`<span class="mres ${r.win?'w':'l'}">${r.win?'G':'P'}</span> <b>${r.sa}–${r.sb}</b>${m.wo?' <small class="club">W.O.</small>':` <small class="club">${(m.s||[]).map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', ')}</small>`}`;
-      h+=`<div class="kmatch${m?' done':''}${open?' open':''}"><button type="button" class="kmhead" data-kopen="${esc(k)}"><span><b>${esc(name(a))}</b> vs <b>${esc(name(b))}</b></span><span>${res}</span></button>${open?ctlEditor(m,a,b,name):''}</div>`;
+      h+=`<div class="kmatch${m?' done':''}${open?' open':''}"><button type="button" class="kmhead" data-kopen="${esc(k)}"><span><small class="club">Mesa ${mesa} · </small><b>${esc(name(a))}</b> vs <b>${esc(name(b))}</b></span><span>${res}</span></button>${open?ctlEditor(m,a,b,name):''}</div>`;
     }
   });
   return h+'</div>';
@@ -2156,7 +2173,7 @@ async function pdfCtl(){
   const doc=await newPdf(`${JDN.title} · ${cat.name}`,`Control ${n} · ${fmtDay(c.date)} · ${A.club}`);
   doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador','PJ','PG','PP','Sets','Tantos','Puntos','% (de 25)']],
     body:st.map(s=>[s.pos,s.p.name,s.pj,s.pg,s.pp,`${s.sf}-${s.sc}`,`${s.pf}-${s.pc}`,s.pts,f1(s.pct)+' %'])});
-  const body=[];rrRounds(P.map(p=>p.id)).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
+  const body=[];ctlRounds(d).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
     body.push([ri+1,`${name(a)} vs ${name(b)}`,!m?'Pendiente':m.skip?'No se jugó (justificado)':`${r.sa}-${r.sb}${m.wo?' (W.O.)':''}`,m&&m.s?m.s.map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', '):''])}));
   doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ronda','Partido','Resultado','Sets']],body});
   pdfFooters(doc);doc.save(pdfName(['jdn-2027',cat.name,'control',n]));
