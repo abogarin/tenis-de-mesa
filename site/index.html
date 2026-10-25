@@ -1427,6 +1427,10 @@ const fmtDay=iso=>new Date(iso+'T12:00:00').toLocaleDateString('es-CR',{weekday:
 const A={store:null,user:null,coach:null,club:null,view:'roll',date:isoDay(new Date()),cats:null,repCats:null,from:null,to:null,who:'',session:{marks:{}},sessions:new Map(),extra:[],roster:[],unwatch:null,started:false};
 const FB_V='10.12.2',FB_LIBS=['app','auth','firestore'].map(m=>`https://www.gstatic.com/firebasejs/${FB_V}/firebase-${m}-compat.js`);
 const sessId=(club,date)=>slugify(club)+'__'+date;
+const selEncodeMatch=m=>m&&Array.isArray(m.s)?{...m,s:m.s.map(x=>Array.isArray(x)?x.join('-'):x)}:m;
+const selDecodeMatch=m=>m&&Array.isArray(m.s)?{...m,s:m.s.map(x=>typeof x==='string'?x.split('-').map(Number):x)}:m;
+function selMapMatches(d,f){if(!d)return d;const o={...d,controls:{}};for(const n in d.controls||{}){const ms={};for(const k in d.controls[n]?.matches||{})ms[k]=f(d.controls[n].matches[k]);o.controls[n]={...d.controls[n],matches:ms}}return o}
+const selEncode=d=>selMapMatches(d,selEncodeMatch),selDecode=d=>selMapMatches(d,selDecodeMatch);
 async function firebaseStore(cfg){
   for(const src of FB_LIBS)await loadScript(src);
   const fb=window.firebase;if(!fb.apps.length)fb.initializeApp(cfg);
@@ -1446,8 +1450,11 @@ async function firebaseStore(cfg){
     // per-athlete settings set by coaches: {cat (category correction), inactive, reviewed}
     settings:async club=>{const o={};(await db.collection('categories').where('club','==',club).get()).docs.forEach(d=>{const x=d.data();o[x.athlete]={cat:x.cat||null,inactive:!!x.inactive,reviewed:!!x.reviewed}});return o},
     // internal selection controls (one document per event and category)
-    getSelection:async(club,key)=>{const s=await db.collection('selections').doc(slugify(club)+'__'+key).get();return s.exists?s.data():null},
-    saveSelection:(club,key,data,who)=>db.collection('selections').doc(slugify(club)+'__'+key).set({...data,club,...stamp(who)}),
+    // Firestore can't store arrays inside arrays, so set scores [[11,8],[9,11]] are kept as ["11-8","9-11"]
+    getSelection:async(club,key)=>{const s=await db.collection('selections').doc(slugify(club)+'__'+key).get();return s.exists?selDecode(s.data()):null},
+    saveSelection:(club,key,data,who)=>db.collection('selections').doc(slugify(club)+'__'+key).set({...selEncode(data),club,...stamp(who)}),
+    // change one field only (one match, one grade...), so two devices never overwrite each other's results
+    patchSelection:(club,key,path,value,who)=>db.collection('selections').doc(slugify(club)+'__'+key).update(new fb.firestore.FieldPath(...path.map(String)),value===null?FV.delete():(path[path.length-1]==='matches'?Object.fromEntries(Object.entries(value).map(([k,m])=>[k,selEncodeMatch(m)])):selEncodeMatch(value)),'updatedBy',who,'updatedAt',FV.serverTimestamp()),
     setSetting:(club,athlete,patch,who)=>db.collection('categories').doc(slugify(club)+'__'+slugify(athlete)).set({club,athlete,...patch,...stamp(who)},{merge:true}),
   };
 }
@@ -1481,6 +1488,7 @@ function mockStore(){
     athletes:async club=>X.filter(a=>a.club===club),addAthlete:async(club,a)=>{X.push({id:'m'+X.length,...a,club})},
     settings:async()=>JSON.parse(JSON.stringify(O)),setSetting:async(club,id,patch)=>{O[id]={...(O[id]||{}),...patch}},
     getSelection:async(club,key)=>SEL[slugify(club)+'__'+key]?JSON.parse(JSON.stringify(SEL[slugify(club)+'__'+key])):null,
+    patchSelection:async(club,key,path,value)=>{if(window.FAILSAVE)throw {code:'permission-denied'};const d=SEL[slugify(club)+'__'+key];let o=d;for(const s of path.slice(0,-1))o=o[s]=o[s]||{};const l=path[path.length-1];if(value===null)delete o[l];else o[l]=JSON.parse(JSON.stringify(value))},
     saveSelection:async(club,key,data)=>{SEL[slugify(club)+'__'+key]=JSON.parse(JSON.stringify({...data,club}))}};
 }
 // Roster: athletes whose most recent ranking row (current season) lists this club; category = age category
@@ -1951,7 +1959,10 @@ const JDN={key:'jdn2027',title:'Juegos Deportivos Nacionales 2027',attFrom:'2026
           players:['Alessandro Rimolo Villagra','Andrés Chacón Altamirano','Benjamín Calderón Ceciliano','Gael Dinarte Graeff','Isaac Rivera Torres','José Ignacio Retana Aguilar','Tobías Bogarín Cuadra']},
         {key:'u19f',name:'Sub-19 femenino',players:['Abigail Pereira Obando','Jimena Calvo Alvarado','Mariana Rivera Torres','Melissa Lara Arroyo','Naima Jael Gómez Vargas']},
         {key:'u19m',name:'Sub-19 masculino',players:['Esteban Chacón Altamirano','Francisco Guerrero','Ian Chinchilla Pereira','Josué David Tenorio Paniagua','Matías Feng','Santiago Brenes Herrera','Estéfano Tacsan Hidalgo']}]};
-const KC={cat:'u15m',view:'1',data:{},open:null,edit:false,msg:''};
+// Control 1 (22 oct 2026) recovered from the PDFs downloaded on the computer where it was entered:
+// [player A, player B, sets from A's side]. Loaded once with the "Importar" button.
+const JDN_C1_IMPORT={"u19m":[["Francisco Guerrero Umaña","Estéfano Tacsan Hidalgo","11-2 11-2 11-2"],["Ian Chinchilla Pereira","Santiago Brenes Herrera","4-11 4-11 6-11"],["Josue David Tenorio Paniagua","Matias Feng Nie","11-9 4-11 13-15 13-11 5-11"],["Estéfano Tacsan Hidalgo","Esteban Chacón Altamirano","3-11 7-11 5-11"],["Francisco Guerrero Umaña","Matias Feng Nie","11-9 11-8 14-12"],["Ian Chinchilla Pereira","Josue David Tenorio Paniagua","7-11 2-11 5-11"],["Esteban Chacón Altamirano","Santiago Brenes Herrera","12-10 14-12 11-8"],["Estéfano Tacsan Hidalgo","Matias Feng Nie","7-11 4-11 9-11"],["Francisco Guerrero Umaña","Ian Chinchilla Pereira","11-3 8-11 11-4 11-4"],["Matias Feng Nie","Esteban Chacón Altamirano","14-12 5-11 11-7 10-12 7-11"],["Santiago Brenes Herrera","Josue David Tenorio Paniagua","12-10 11-13 11-5 11-9"],["Estéfano Tacsan Hidalgo","Ian Chinchilla Pereira","11-9 11-7 11-8"],["Esteban Chacón Altamirano","Josue David Tenorio Paniagua","11-6 12-10 11-5"],["Matias Feng Nie","Ian Chinchilla Pereira","11-2 13-11 13-11"],["Santiago Brenes Herrera","Francisco Guerrero Umaña","11-9 6-11 11-8 10-12 7-11"],["Ian Chinchilla Pereira","Esteban Chacón Altamirano","6-11 5-11 2-11"],["Josue David Tenorio Paniagua","Francisco Guerrero Umaña","8-11 6-11 5-11"],["Santiago Brenes Herrera","Estéfano Tacsan Hidalgo","11-8 11-9 12-14 12-10"],["Esteban Chacón Altamirano","Francisco Guerrero Umaña","11-8 11-8 11-9"],["Josue David Tenorio Paniagua","Estéfano Tacsan Hidalgo","11-7 11-9 11-9"],["Matias Feng Nie","Santiago Brenes Herrera","8-11 9-11 19-17 12-14"]],"u15m":[["Tobías Bogarin Cuadra","Alessandro Rimolo Villagra","11-7 9-11 13-11 11-7"],["Isaac Rivera Torres","Gael Dinarte Graeff","11-4 11-2 11-5"],["José Ignacio Retana Aguilar","Andrés Chacón Altamirano","11-9 11-5 12-10"],["Tobías Bogarin Cuadra","Benjamin Calderon Ceciliano","6-11 8-11 11-6 8-11"],["Alessandro Rimolo Villagra","Gael Dinarte Graeff","11-8 6-11 4-11 3-11"],["Isaac Rivera Torres","José Ignacio Retana Aguilar","11-4 11-8 11-5"],["Tobías Bogarin Cuadra","Isaac Rivera Torres","9-11 2-11 14-12 6-11"],["Benjamin Calderon Ceciliano","Alessandro Rimolo Villagra","13-15 11-8 11-8 11-8"],["Gael Dinarte Graeff","Andrés Chacón Altamirano","6-11 5-11 4-11"],["Gael Dinarte Graeff","José Ignacio Retana Aguilar","11-5 4-11 7-11 6-11"],["Benjamin Calderon Ceciliano","Andrés Chacón Altamirano","11-9 11-8 10-12 6-11 6-11"],["Alessandro Rimolo Villagra","Isaac Rivera Torres","5-11 9-11 8-11"],["Tobías Bogarin Cuadra","Gael Dinarte Graeff","11-6 11-3 8-11 8-11 12-14"],["José Ignacio Retana Aguilar","Benjamin Calderon Ceciliano","11-2 11-7 11-9"],["Andrés Chacón Altamirano","Isaac Rivera Torres","4-11 9-11 7-11"],["Tobías Bogarin Cuadra","Andrés Chacón Altamirano","10-12 11-3 7-11 7-11"],["Gael Dinarte Graeff","Benjamin Calderon Ceciliano","7-11 9-11 11-9 12-14"],["Alessandro Rimolo Villagra","José Ignacio Retana Aguilar","7-11 7-11 6-11"],["Tobías Bogarin Cuadra","José Ignacio Retana Aguilar","11-4 8-11 9-11 8-11"],["Andrés Chacón Altamirano","Alessandro Rimolo Villagra","11-7 11-7 11-9"],["Benjamin Calderon Ceciliano","Isaac Rivera Torres","6-11 9-11 9-11"]],"u19f":[["Jimena Calvo Alvarado","Naima Jael Gomez Vargas","11-5 11-3 7-11 13-15 8-11"],["Mariana Rivera Torres","Melissa Lara Arroyo","11-7 11-6 8-11 11-9"],["Naima Jael Gomez Vargas","Abigail Pereira Obando","12-10 12-10 5-11 4-11 11-4"],["Jimena Calvo Alvarado","Mariana Rivera Torres","8-11 11-6 11-13 10-12"],["Abigail Pereira Obando","Melissa Lara Arroyo","11-5 11-5 11-3"],["Naima Jael Gomez Vargas","Mariana Rivera Torres","11-9 13-11 9-11 11-8"],["Mariana Rivera Torres","Abigail Pereira Obando","4-11 3-11 3-11"],["Melissa Lara Arroyo","Jimena Calvo Alvarado","7-11 3-11 4-11"],["Abigail Pereira Obando","Jimena Calvo Alvarado","11-6 11-7 6-11 12-10"],["Melissa Lara Arroyo","Naima Jael Gomez Vargas","9-11 7-11 11-8 9-11"]]};
+const KC={unsaved:new Set(),cat:'u15m',view:'1',data:{},open:null,edit:false,msg:''};
 const ctlDocKey=cat=>JDN.key+'__'+cat;
 const ctlCat=()=>JDN.cats.find(c=>c.key===KC.cat);
 const mKey=(x,y)=>[x,y].sort().join('~');
@@ -1964,16 +1975,26 @@ function ctlFind(name){
 const ctlNewPlayer=name=>{const r=ctlFind(name);return r?{id:r.id,name:r.name,carne:r.carne||''}:{id:'n-'+slugify(name),name:titleCase(name),carne:''}};
 async function ctlLoad(cat){
   if(KC.data[cat]!==undefined)return KC.data[cat];
-  KC.data[cat]=await A.store.getSelection(A.club,ctlDocKey(cat)).catch(e=>{console.error(e);return null});
+  try{KC.data[cat]=await A.store.getSelection(A.club,ctlDocKey(cat));KC.loadErr=null}
+  catch(e){console.error(e);KC.loadErr=e.code||e.message||'error';delete KC.data[cat]}   // never mistake a failed read for "not set up yet"
   return KC.data[cat];
 }
 async function ctlSave(){
   const d=KC.data[KC.cat];KC.msg='Guardando…';ctlRender();
-  try{await A.store.saveSelection(A.club,ctlDocKey(KC.cat),d,A.user.email);KC.msg='Guardado ✓'}
-  catch(e){console.error(e);KC.msg='No se pudo guardar. Revise la conexión y las reglas de Firestore (colección selections).'}
+  try{await A.store.saveSelection(A.club,ctlDocKey(KC.cat),d,A.user.email);KC.msg='Guardado ✓';KC.unsaved.delete(KC.cat)}
+  catch(e){console.error(e);KC.unsaved.add(KC.cat);KC.msg='';
+    alert('NO SE GUARDÓ en Firebase'+(e.code==='permission-denied'?': falta permiso para la colección «selections». Publique las reglas de Firestore actualizadas.':'. Revise la conexión.')+'\n\nLos resultados siguen en esta pantalla: no recargue ni cierre la página y use «Reintentar guardar».')}
   ctlRender();
 }
-async function ctlStart(){await ctlLoad(KC.cat);ctlRender()}
+async function ctlPatch(path,value){
+  KC.msg='Guardando…';ctlRender();
+  try{await A.store.patchSelection(A.club,ctlDocKey(KC.cat),path,value,A.user.email);KC.msg='Guardado ✓'}
+  catch(e){console.error(e);KC.unsaved.add(KC.cat);KC.msg='';
+    alert('NO SE GUARDÓ en Firebase'+(e.code==='permission-denied'?': falta permiso para la colección «selections». Publique las reglas de Firestore actualizadas.':'. Revise la conexión.')+'\n\nLos resultados siguen en esta pantalla: no recargue ni cierre la página y use «Reintentar guardar».')}
+  ctlRender();
+}
+// always read the latest saved version when the tab is opened (another device may have added results)
+async function ctlStart(){if(!KC.unsaved.size)KC.data={};await ctlLoad(KC.cat);ctlRender()}
 // circle method: n-1 rounds (n even; with an odd count one player rests each round)
 // Rounds for a category: the coach's fixed order when it fits the current player list, otherwise the standard rotation
 function ctlRounds(d){
@@ -2049,12 +2070,12 @@ function ctlSummary(d){
 function ctlRender(){
   const box=$('#attCtl'),cat=ctlCat(),d=KC.data[KC.cat];
   let h=`<div class="pctl" style="flex-wrap:wrap"><b class="atth3" style="margin-right:6px">${esc(JDN.title)}</b>${JDN.cats.map(c=>`<button class="chip" data-kcat="${c.key}" aria-pressed="${c.key===KC.cat}">${esc(c.name)}</button>`).join('')}</div>`;
-  if(d===undefined){box.innerHTML=h+'<div class="pempty">Cargando…</div>';return}
+  if(d===undefined){box.innerHTML=h+(KC.loadErr?`<div class="pempty"><b style="color:var(--down)">No se pudieron leer los datos guardados</b> (${esc(KC.loadErr)}).<br>${KC.loadErr==='permission-denied'?'Falta permiso para la colección «selections»: publique las reglas de Firestore actualizadas.':'Revise la conexión.'}<br><br><button class="btn primary" data-kretry>Reintentar</button></div>`:'<div class="pempty">Cargando…</div>');return}
   if(!d){
     box.innerHTML=h+`<div class="pempty">Todavía no se ha configurado ${esc(cat.name)}.<br><br>
       <button class="btn primary" data-kinit="list">Crear con los convocados del documento (${cat.players.length})</button> <button class="btn" data-kinit="empty">Empezar con la lista vacía</button></div>`;return}
   h+=`<div class="pctl" style="flex-wrap:wrap">${JDN.controls.map(c=>`<button class="chip" data-kview="${c.n}" aria-pressed="${KC.view===String(c.n)}">Control ${c.n} · ${esc(fmtDay(c.date))}</button>`).join('')}<button class="chip" data-kview="sum" aria-pressed="${KC.view==='sum'}">Resultado final</button><button class="chip" data-kview="players" aria-pressed="${KC.view==='players'}">Jugadores (${d.players.length})</button>
-    ${KC.view!=='players'?`<button class="chip pdfbtn" data-pdf="ctl">Descargar PDF</button>`:''}${ATT_DEMO&&/^\d$/.test(KC.view)?'<button class="chip" data-kdemo>Llenar con resultados de prueba</button>':''}${ATT_DEMO&&KC.cat==='u19f'?'<button class="chip" data-ktie>Simular empate en 4.º y 5.º lugar</button>':''}<span class="club">${esc(KC.msg)}</span></div>`;
+    ${KC.view!=='players'?`<button class="chip pdfbtn" data-pdf="ctl">Descargar PDF</button>`:''}${ATT_DEMO&&/^\d$/.test(KC.view)?'<button class="chip" data-kdemo>Llenar con resultados de prueba</button>':''}${KC.view==='1'&&JDN_C1_IMPORT[KC.cat]&&!Object.keys(d.controls?.['1']?.matches||{}).length?'<button class="chip" data-kimport style="border-color:var(--ball);color:var(--ball)">Importar resultados del Control 1 (PDF del 22 oct)</button>':''}${ATT_DEMO&&KC.cat==='u19f'?'<button class="chip" data-ktie>Simular empate en 4.º y 5.º lugar</button>':''}<span class="club">${esc(KC.msg)}</span></div>${KC.unsaved.has(KC.cat)?`<div class="attdemo" style="background:var(--down-soft);border-color:var(--down);color:var(--down)"><b>Hay cambios sin guardar en Firebase.</b> No recargue ni cierre la página. <button class="chip" data-kresave>Reintentar guardar</button></div>`:''}`;
   if(KC.view==='players')h+=ctlPlayersHtml(d);
   else if(KC.view==='sum')h+=ctlSummaryHtml(d);
   else h+=ctlControlHtml(d,+KC.view);
@@ -2120,28 +2141,40 @@ function ctlReadSets(ed){
   return {s};
 }
 function ctlSet(k,val){const d=KC.data[KC.cat];d.controls=d.controls||{};const c=d.controls[KC.view]=d.controls[KC.view]||{matches:{}};if(val)c.matches[k]=val;else delete c.matches[k]}
+window.addEventListener('beforeunload',e=>{if(KC.unsaved.size){e.preventDefault();e.returnValue=''}});
 $('#ctlLogout').addEventListener('click',()=>A.store.signOut());
 $('#attCtl').addEventListener('click',async e=>{
   const t=e.target.closest('button');if(!t)return;const d=KC.data[KC.cat];
-  if(t.dataset.kcat){KC.cat=t.dataset.kcat;KC.open=null;KC.msg='';await ctlLoad(KC.cat);ctlRender();return}
+  if(t.dataset.kretry!==undefined){KC.loadErr=null;await ctlLoad(KC.cat);ctlRender();return}
+  if(t.dataset.kresave!==undefined){await ctlSave();return}
+  if(t.dataset.kcat){KC.cat=t.dataset.kcat;KC.open=null;KC.msg='';if(!KC.unsaved.has(KC.cat))delete KC.data[KC.cat];await ctlLoad(KC.cat);ctlRender();return}
   if(t.dataset.kinit){KC.data[KC.cat]={event:JDN.key,cat:KC.cat,players:t.dataset.kinit==='list'?ctlCat().players.map(ctlNewPlayer):[],controls:{},physical:{}};KC.view=t.dataset.kinit==='list'?'1':'players';await ctlSave();return}
   if(t.dataset.kview){KC.view=t.dataset.kview;KC.open=null;ctlRender();return}
   if(t.dataset.kopen){KC.open=KC.open===t.dataset.kopen?null:t.dataset.kopen;ctlRender();return}
-  if(t.dataset.kdel!==undefined){if(!confirm('¿Quitar a este jugador de la categoría?'))return;d.players=d.players.filter(p=>p.id!==t.dataset.kdel);await ctlSave();return}
-  if(t.dataset.kadd!==undefined){const v=$('#kNew').value.trim();if(!v)return;const p=ctlNewPlayer(v);if(d.players.some(x=>x.id===p.id)){KC.msg='Ese jugador ya está en la lista.';ctlRender();return}d.players.push(p);await ctlSave();return}
+  if(t.dataset.kdel!==undefined){if(!confirm('¿Quitar a este jugador de la categoría?'))return;d.players=d.players.filter(p=>p.id!==t.dataset.kdel);await ctlPatch(['players'],d.players);return}
+  if(t.dataset.kadd!==undefined){const v=$('#kNew').value.trim();if(!v)return;const p=ctlNewPlayer(v);if(d.players.some(x=>x.id===p.id)){KC.msg='Ese jugador ya está en la lista.';ctlRender();return}d.players.push(p);await ctlPatch(['players'],d.players);return}
   if(t.dataset.ktie!==undefined){await ctlTieDemo();return}
+  if(t.dataset.kimport!==undefined){
+    const rows=JDN_C1_IMPORT[KC.cat],toks=s=>fold(s).split(/\s+/).filter(Boolean);
+    const find=n=>{const w=toks(n);let h=d.players.filter(p=>fold(p.name)===fold(n));if(h.length!==1)h=d.players.filter(p=>{const t=toks(p.name);return w.every(x=>t.includes(x))||t.every(x=>w.includes(x))});return h.length===1?h[0]:null};
+    const ms={},miss=new Set();
+    for(const [na,nb,s] of rows){const a=find(na),b=find(nb);if(!a)miss.add(na);if(!b)miss.add(nb);if(a&&b)ms[mKey(a.id,b.id)]={a:a.id,b:b.id,s:s.split(' ').map(x=>x.split('-').map(Number))}}
+    if(miss.size){alert('No se encontraron en la lista de jugadores: '+[...miss].join(', ')+'.\nAgréguelos en «Jugadores» (o corrija el nombre) y vuelva a importar.');return}
+    if(!confirm(`Se cargarán ${Object.keys(ms).length} partidos en el Control 1 de ${ctlCat().name}. ¿Continuar?`))return;
+    d.controls=d.controls||{};d.controls['1']={...(d.controls['1']||{}),matches:ms};
+    await ctlPatch(['controls','1','matches'],ms);return}
   if(t.dataset.kdemo!==undefined){let seed=KC.view*97;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const P=d.players;
     for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const s=[];let wa=0,wb=0;while(wa<3&&wb<3){const aw=rnd()<0.5+(j-i)*0.04;const lo=Math.floor(rnd()*10);s.push(aw?[11,lo]:[lo,11]);aw?wa++:wb++}ctlSet(mKey(P[i].id,P[j].id),{a:P[i].id,b:P[j].id,s})}
     await ctlSave();return}
   const ed=t.closest('.keditor');if(!ed)return;const a=ed.dataset.ka,b=ed.dataset.kb,k=mKey(a,b);
-  if(t.dataset.ksave!==undefined){const r=ctlReadSets(ed);if(r.err){ed.querySelector('[data-kerr]').textContent=r.err;return}ctlSet(k,{a,b,s:r.s});KC.open=null;await ctlSave();return}
-  if(t.dataset.kwo){ctlSet(k,{a,b,wo:t.dataset.kwo});KC.open=null;await ctlSave();return}
-  if(t.dataset.kskip!==undefined){ctlSet(k,{a,b,skip:true});KC.open=null;await ctlSave();return}
-  if(t.dataset.kclear!==undefined){ctlSet(k,null);KC.open=null;await ctlSave();return}
+  if(t.dataset.ksave!==undefined){const r=ctlReadSets(ed);if(r.err){ed.querySelector('[data-kerr]').textContent=r.err;return}ctlSet(k,{a,b,s:r.s});KC.open=null;await ctlPatch(['controls',KC.view,'matches',k],{a,b,s:r.s});return}
+  if(t.dataset.kwo){ctlSet(k,{a,b,wo:t.dataset.kwo});KC.open=null;await ctlPatch(['controls',KC.view,'matches',k],{a,b,wo:t.dataset.kwo});return}
+  if(t.dataset.kskip!==undefined){ctlSet(k,{a,b,skip:true});KC.open=null;await ctlPatch(['controls',KC.view,'matches',k],{a,b,skip:true});return}
+  if(t.dataset.kclear!==undefined){ctlSet(k,null);KC.open=null;await ctlPatch(['controls',KC.view,'matches',k],null);return}
 });
 $('#attCtl').addEventListener('change',async e=>{
   const i=e.target.closest('[data-kfis]');if(!i)return;const d=KC.data[KC.cat];d.physical=d.physical||{};
-  if(i.value==='')delete d.physical[i.dataset.kfis];else d.physical[i.dataset.kfis]=Math.max(0,Math.min(100,+i.value));await ctlSave();
+  if(i.value==='')delete d.physical[i.dataset.kfis];else d.physical[i.dataset.kfis]=Math.max(0,Math.min(100,+i.value));await ctlPatch(['physical',i.dataset.kfis],i.value===''?null:d.physical[i.dataset.kfis]);
 });
 // Test mode only: 3 controls for Sub-19 femenino where Mariana and Melissa finish level in 4th/5th
 async function ctlTieDemo(){
