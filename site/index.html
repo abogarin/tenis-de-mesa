@@ -1659,8 +1659,9 @@ function attRankingCard(a){
 function attStats(a,sessions){
   const s={P:0,A:0,J:0,T:0,days:[]};
   for(const x of sessions){const m=x.marks?.[a.id];if(m){s[m]++;s.days.push({date:x.date,st:m})}}
-  const base=s.P+s.T+s.A;s.total=s.days.length;s.pct=base?Math.round(100*(s.P+s.T)/base):null;
-  let streak=0;for(let i=s.days.length-1;i>=0;i--){const st=s.days[i].st;if(st==='J')continue;if(st==='P'||st==='T')streak++;else break}s.streak=streak;
+  // justified absences count as attended
+  const base=s.P+s.T+s.J+s.A;s.total=s.days.length;s.att=s.P+s.T+s.J;s.pct=base?Math.round(100*s.att/base):null;
+  let streak=0;for(let i=s.days.length-1;i>=0;i--){const st=s.days[i].st;if(st==='P'||st==='T'||st==='J')streak++;else break}s.streak=streak;
   return s;
 }
 function attRangeSessions(){return [...A.sessions.values()].filter(s=>!s.cancelled&&s.date>=A.from&&s.date<=A.to).sort((a,b)=>a.date<b.date?-1:1)}
@@ -1705,7 +1706,7 @@ function attRenderReport(){
   if(A.who&&!people.some(a=>a.id===A.who))A.who='';
   A.people=people;$('#attWhoQ').value=A.who?(people.find(a=>a.id===A.who)?.name||''):'';
   const sessions=attRangeSessions(),body=$('#attRepBody');
-  const legend=`<div class="attlegend"><span><span class="stcell P">P</span> Presente</span><span><span class="stcell T">T</span> Tarde</span><span><span class="stcell J">J</span> Justificado</span><span><span class="stcell A">A</span> Ausente</span><span>% de asistencia = (presente + tarde) ÷ (presente + tarde + ausente); lo justificado no cuenta.</span></div>`;
+  const legend=`<div class="attlegend"><span><span class="stcell P">P</span> Presente</span><span><span class="stcell T">T</span> Tarde</span><span><span class="stcell J">J</span> Justificado</span><span><span class="stcell A">A</span> Ausente</span><span>% de asistencia = (presente + tarde + justificado) ÷ sesiones con lista; la ausencia justificada cuenta como asistencia.</span></div>`;
   if(!sessions.length&&!A.who){body.innerHTML=`<div class="pempty">No hay sesiones registradas entre el ${esc(fmtDay(A.from))} y el ${esc(fmtDay(A.to))}.</div>`+attInactiveBox();return}
   if(A.who){
     const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
@@ -1714,7 +1715,7 @@ function attRenderReport(){
       <label class="catfix" title="La categoría se calcula con el ranking; cámbiela si está mal">Categoría <select id="attCatFix"><option value="">${esc(a.auto||a.cat)} (automática)</option>${ATT_CATS.filter(c=>c!==a.auto).map(c=>`<option${a.manual&&a.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select></label><button class="chip pdfbtn" data-pdf="att">Descargar PDF</button></div>
       <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
         <div class="card"><b>${st.pct==null?'—':st.pct+'%'}</b><span>Asistencia</span></div>
-        <div class="card"><b>${st.P+st.T}</b><span>Días asistidos (${st.T} tarde)</span></div>
+        <div class="card"><b>${st.att}</b><span>Días asistidos (${st.T} tarde, ${st.J} justif.)</span></div>
         <div class="card"><b>${st.A}</b><span>Ausencias</span></div>
         <div class="card"><b>${st.J}</b><span>Justificadas</span></div>
         <div class="card"><b>${st.streak}</b><span>Racha actual</span></div></div>
@@ -1773,7 +1774,7 @@ async function pdfAtt(){
   if(A.who){
     const a=people.find(x=>x.id===A.who),st=attStats(a,sessions);
     const doc=await newPdf(`Asistencia · ${a.name}`,`${A.club} · ${a.cat} · ${period}`);
-    doc.autoTable({...tableStyle,startY:doc._startY,head:[['Asistencia','Días asistidos','Tarde','Justificadas','Ausencias','Racha actual']],body:[[st.pct==null?'—':st.pct+'%',st.P+st.T,st.T,st.J,st.A,st.streak]]});
+    doc.autoTable({...tableStyle,startY:doc._startY,head:[['Asistencia','Días asistidos','Tarde','Justificadas','Ausencias','Racha actual']],body:[[st.pct==null?'—':st.pct+'%',st.att,st.T,st.J,st.A,st.streak]]});
     {const tot=st.P+st.T+st.J+st.A;if(tot)doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Distribución','Presente','Tarde','Justificado','Ausente']],body:[['% de sesiones marcadas',...['P','T','J','A'].map(k=>Math.round(100*st[k]/tot)+'% ('+st[k]+')')]]})}
     const R=attRanking(a);
     if(R&&R.length)doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ranking Liga Menor','Etapa','Puntos','Posición','Cambio vs etapa anterior']],
@@ -1994,7 +1995,8 @@ async function ctlPatch(path,value){
   ctlRender();
 }
 // always read the latest saved version when the tab is opened (another device may have added results)
-async function ctlStart(){if(!KC.unsaved.size)KC.data={};await ctlLoad(KC.cat);ctlRender()}
+async function ctlStart(){await attReloadSessions();   // latest roll calls, so attendance is current
+  if(!KC.unsaved.size)KC.data={};await ctlLoad(KC.cat);ctlRender()}
 // circle method: n-1 rounds (n even; with an odd count one player rests each round)
 // Rounds for a category: the coach's fixed order when it fits the current player list, otherwise the standard rotation
 function ctlRounds(d){
@@ -2036,8 +2038,9 @@ function ctlStandings(d,n){
 function ctlAttendance(p){
   const ss=[...A.sessions.values()].filter(s=>!s.cancelled&&s.date>=JDN.attFrom&&s.date<=JDN.attTo);
   const id=A.roster.find(a=>a.id===p.id)?p.id:null;if(!id)return null;
-  const n=ss.filter(s=>['P','T'].includes(s.marks?.[id])).length;
-  return {n,pct:Math.min(10,10*n/JDN.sessions)};
+  const c={P:0,T:0,J:0,A:0};for(const s of ss){const m=s.marks?.[id];if(m in c)c[m]++}
+  const n=c.P+c.T+c.J;   // justified counts as attended
+  return {n,c,pct:Math.min(10,10*n/JDN.sessions)};
 }
 const f1=v=>(Math.round(v*100)/100).toLocaleString('es-CR',{minimumFractionDigits:2,maximumFractionDigits:2});   // 2 decimals
 function ctlSummary(d){
@@ -2127,10 +2130,10 @@ function ctlSummaryHtml(d){
   return `<div class="pcard"><h3 class="atth3">Resultado final · ${esc(ctlCat().name)}</h3><p class="pct" style="margin:0 0 6px">Controles 75 % (25 % cada uno) + asistencia 10 % (${JDN.sessions} sesiones entre el ${esc(fmtDay(JDN.attFrom))} y el ${esc(fmtDay(JDN.attTo))}) + preparación física 15 % (nota del entrenador de 0 a 100).</p>
     <div class="tblwrap ptable"><table><thead><tr><th class="num">Pos.</th><th>Jugador</th>${JDN.controls.map(c=>`<th class="num">C${c.n}</th>`).join('')}<th class="num">Asistencia</th><th class="num">Prep. física</th><th class="num">Total</th></tr></thead><tbody>
     ${R.map(r=>`<tr><td class="num">${r.pos}${r.tied?' <span title="Empate sin resolver: valorar partido de desempate">*</span>':''}</td><td class="name">${esc(r.p.name)}${r.tieNote?` <small class="club" title="${esc(r.tieNote)}">(desempate)</small>`:''}</td>${r.cs.map(s=>`<td class="num">${s&&s.pj?f1(s.pct):'<span class="club">—</span>'}</td>`).join('')}
-      <td class="num">${r.att?`${f1(r.att.pct)} <small class="club">(${r.att.n}/${JDN.sessions})</small>`:'<span class="club" title="No está en la lista de asistencia del club">—</span>'}</td>
+      <td class="num">${r.att?`${f1(r.att.pct)} <small class="club" title="Presente ${r.att.c.P} · Tarde ${r.att.c.T} · Justificado ${r.att.c.J} · Ausente ${r.att.c.A}">(${r.att.n}/${JDN.sessions}${r.att.c.J?` · ${r.att.c.J} J`:''})</small>`:'<span class="club" title="No está en la lista de asistencia del club">—</span>'}</td>
       <td class="num"><input class="kfis" type="number" min="0" max="100" placeholder="0-100" data-kfis="${esc(r.p.id)}" value="${r.fis??''}"> ${r.fpct!=null?`<small class="club">${f1(r.fpct)}</small>`:''}</td>
       <td class="num"><b>${f1(r.total)} %</b></td></tr>`).join('')}
-    </tbody></table></div><p class="pct">Si dos o más atletas terminan con el mismo total, se ordenan con los partidos de los 3 controles entre ellos: enfrentamiento directo, diferencia de sets y diferencia de tantos (pase el cursor sobre «desempate» para ver el detalle). * = sigue empatado: valorar un partido de desempate. C1–C3: porcentaje obtenido en cada control (máximo 25). La asistencia sale de Pasar lista (presente o tarde). Escriba la nota de preparación física y salga del campo para guardarla.</p></div>`;
+    </tbody></table></div><p class="pct">Si dos o más atletas terminan con el mismo total, se ordenan con los partidos de los 3 controles entre ellos: enfrentamiento directo, diferencia de sets y diferencia de tantos (pase el cursor sobre «desempate» para ver el detalle). * = sigue empatado: valorar un partido de desempate. C1–C3: porcentaje obtenido en cada control (máximo 25). La asistencia sale de Pasar lista (presente, tarde o justificado). Escriba la nota de preparación física y salga del campo para guardarla.</p></div>`;
 }
 function ctlReadSets(ed){
   const s=[];for(let i=0;i<5;i++){const x=ed.querySelector(`[data-ks="a${i}"]`).value,y=ed.querySelector(`[data-ks="b${i}"]`).value;if(x===''&&y==='')continue;if(x===''||y==='')return {err:`Falta un marcador en el set ${i+1}.`};const u=+x,v=+y;if(u===v)return {err:`El set ${i+1} no puede terminar empatado.`};if(Math.max(u,v)<11)return {err:`En el set ${i+1} nadie llegó a 11.`};s.push([u,v])}
