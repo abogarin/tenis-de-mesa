@@ -1999,11 +1999,15 @@ async function ctlStart(){await attReloadSessions();   // latest roll calls, so 
   if(!KC.unsaved.size)KC.data={};await ctlLoad(KC.cat);ctlRender()}
 // circle method: n-1 rounds (n even; with an odd count one player rests each round)
 // Rounds for a category: the coach's fixed order when it fits the current player list, otherwise the standard rotation
-function ctlRounds(d){
+// Fixed orders per control set by the coach (by surname); a control without its own order uses the closest earlier one
+const JDN_ROUNDS_BY_CONTROL={"2": {"u19m": [["guerrero-feng", "chinchilla-brenes", "tenorio-tacsan", "chacon"], ["feng-chacon", "guerrero-tacsan", "chinchilla-tenorio", "brenes"], ["chacon-brenes", "feng-tacsan", "guerrero-chinchilla", "tenorio"], ["tacsan-chacon", "brenes-tenorio", "feng-chinchilla", "guerrero"], ["chacon-tenorio", "tacsan-chinchilla", "brenes-guerrero", "feng"], ["chinchilla-chacon", "tenorio-guerrero", "brenes-feng", "tacsan"], ["chacon-guerrero", "tenorio-feng", "tacsan-brenes", "chinchilla"]], "u15m": [["bogarin-rimolo", "rivera-calderon", "retana-chacon", "dinarte"], ["bogarin-dinarte", "rimolo-calderon", "rivera-retana", "chacon"], ["bogarin-rivera", "dinarte-rimolo", "calderon-chacon", "retana"], ["calderon-retana", "dinarte-chacon", "rimolo-rivera", "bogarin"], ["bogarin-calderon", "retana-dinarte", "chacon-rivera", "rimolo"], ["bogarin-chacon", "calderon-dinarte", "rimolo-retana", "rivera"], ["bogarin-retana", "chacon-rimolo", "dinarte-rivera", "calderon"]], "u19f": [["calvo-pereira", "rivera-lara", "gomez"], ["pereira-gomez", "calvo-rivera", "lara"], ["gomez-lara", "pereira-rivera", "calvo"], ["rivera-gomez", "lara-calvo", "pereira"], ["gomez-calvo", "lara-pereira", "rivera"]]}};
+function ctlRounds(d,n=1){
   const cat=JDN.cats.find(c=>c.key===d.cat),ids=d.players.map(p=>p.id);
-  if(cat?.rounds){
+  const byC={1:cat?.rounds,2:JDN_ROUNDS_BY_CONTROL[2]?.[d.cat]};
+  let order=null;for(let k=n;k>=1&&!order;k--)order=byC[k]||null;
+  if(order){
     const by=w=>{const h=d.players.filter(p=>fold(p.name).split(/\s+/).includes(w));return h.length===1?h[0].id:null};
-    const out=cat.rounds.map(r=>{const rest=by(r[r.length-1]);return [...r.slice(0,-1).map(m=>m.split('-').map(by)),[rest,null]]});
+    const out=order.map(r=>{const rest=by(r[r.length-1]);return [...r.slice(0,-1).map(m=>m.split('-').map(by)),[rest,null]]});
     const pairs=new Set(out.flatMap(r=>r.filter(([a,b])=>a&&b).map(([a,b])=>mKey(a,b))));
     const ok=out.every(r=>r.flat().filter(Boolean).length===r.length*2-1||r.every(([a,b])=>a&&b||a&&!b))&&pairs.size===ids.length*(ids.length-1)/2&&out.flat(2).filter(Boolean).every(x=>ids.includes(x));
     if(ok)return out;
@@ -2092,7 +2096,7 @@ function ctlPlayersHtml(d){
     <p class="pct">Si ya hay resultados registrados, quitar a un jugador elimina sus partidos de los cálculos.</p></div>`;
 }
 function ctlControlHtml(d,n){
-  const P=d.players,ms=d.controls?.[n]?.matches||{},rounds=ctlRounds(d),name=id=>P.find(p=>p.id===id)?.name||'?';
+  const P=d.players,ms=d.controls?.[n]?.matches||{},rounds=ctlRounds(d,n),name=id=>P.find(p=>p.id===id)?.name||'?';
   const total=P.length*(P.length-1)/2,done=Object.keys(ms).filter(k=>{const [x,y]=k.split('~');return P.some(p=>p.id===x)&&P.some(p=>p.id===y)}).length;
   const st=ctlStandings(d,n);
   let h=`<div class="pcard"><h3 class="atth3">Clasificación · Control ${n}</h3><p class="pct" style="margin:0 0 6px">${done} de ${total} partidos registrados. Partido ganado = 2 puntos; % del control = puntos ÷ puntos posibles × 25 %.</p>
@@ -2209,7 +2213,7 @@ async function pdfCtl(){
   const doc=await newPdf(`${JDN.title} · ${cat.name}`,`Control ${n} · ${fmtDay(c.date)} · ${A.club}`);
   doc.autoTable({...tableStyle,startY:doc._startY,head:[['Pos.','Jugador','PJ','PG','PP','Sets','Tantos','Puntos','% (de 25)']],
     body:st.map(s=>[s.pos,s.p.name,s.pj,s.pg,s.pp,`${s.sf}-${s.sc}`,`${s.pf}-${s.pc}`,s.pts,f1(s.pct)+' %'])});
-  const body=[];ctlRounds(d).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
+  const body=[];ctlRounds(d,n).forEach((pr,ri)=>pr.forEach(([a,b])=>{if(!a||!b)return;const m=ms[mKey(a,b)],r=m?mRes(m,a):null;
     body.push([ri+1,`${name(a)} vs ${name(b)}`,!m?'Pendiente':m.skip?'No se jugó (justificado)':`${r.sa}-${r.sb}${m.wo?' (W.O.)':''}`,m&&m.s?m.s.map(([x,y])=>m.a===a?`${x}-${y}`:`${y}-${x}`).join(', '):''])}));
   doc.autoTable({...tableStyle,startY:doc.lastAutoTable.finalY+14,head:[['Ronda','Partido','Resultado','Sets']],body});
   pdfFooters(doc);doc.save(pdfName(['jdn-2027',cat.name,'control',n]));
