@@ -1506,6 +1506,12 @@ function attCategory(carne,season){
   }
   return (bestRes||best)?.cat||null;   // youth only: athletes not in any Liga Menor list are left out
 }
+// 2027 season: categories set by the coaches (by carné). They replace the category calculated from the ranking;
+// a change made in the report (Categoría) still wins. Attendance and results are kept: they are stored by carné.
+const CAT_PLAN={
+  '4215':'U15 Masc','4121':'U15 Masc','3787':'U15 Masc','4325':'U15 Masc',          // Tobías Bogarín, Andrés Chacón, Isaac Rivera, Benjamín Calderón
+  '4128':'U19 Masc','4761':'U19 Masc','4682':'U19 Masc','4514':'U19 Masc','4876':'U19 Masc','4874':'U19 Masc',  // Esteban Chacón (2 carnés), Matías Feng, Josué Tenorio, Ian Chinchilla, Estéfano Tacsan
+  '3767':'U19 Fem','3770':'U19 Fem'};                                                // Naima Gómez, Mariana Rivera
 function buildRoster(){
   const season=Math.max(...docs.map(d=>d.season)),club=fold(A.club),last=new Map();
   for(const d of docs.filter(x=>x.season===season).sort((a,b)=>a.stage-b.stage))for(const r of d.rows)last.set(r[1],r);
@@ -1513,7 +1519,7 @@ function buildRoster(){
   const ov=A.over||{},S=id=>ov[id]||{};
   // results anywhere this season (any circuit), to flag athletes who may no longer train with the club
   const hasRes=new Set();for(const d of docs)if(d.season===season)for(const r of d.rows)if(d._base==null||r[4]!==d._base)hasRes.add(r[1]);
-  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const auto=attCategory(carne,season);if(!auto)continue;const s=S(carne),o=ATT_CATS.includes(s.cat)?s.cat:null;
+  for(const [carne,r] of last)if(fold(clubName(r[3])).includes(club)){const auto=CAT_PLAN[carne]||attCategory(carne,season);if(!auto)continue;const s=S(carne),o=ATT_CATS.includes(s.cat)?s.cat:null;
     roster.push({id:carne,carne,name:titleCase(r[2]),cat:o||auto,auto,manual:!!o,inactive:!!s.inactive,review:!hasRes.has(carne)&&!s.reviewed&&!s.inactive})}
   for(const x of A.extra){const id='x-'+x.id,s=S(id),o=ATT_CATS.includes(s.cat)?s.cat:null,cat=o||x.cat;if(ATT_CATS.includes(cat))roster.push({id,carne:'',name:titleCase(x.name),cat,auto:x.cat,manual:!!o,extra:true,inactive:!!s.inactive,review:false})}
   roster.sort((a,b)=>ATT_CATS.indexOf(a.cat)-ATT_CATS.indexOf(b.cat)||a.name.localeCompare(b.name,'es'));
